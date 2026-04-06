@@ -1,4 +1,5 @@
 use num_bigint::{BigUint, RandBigInt};
+use sha2::{Sha256, Digest};
 
 pub fn commit(v: &BigUint, r: &BigUint, g: &BigUint, h: &BigUint, p: &BigUint) -> BigUint {
     (g.modpow(v, p) * h.modpow(r, p)) % (p)
@@ -27,8 +28,15 @@ impl Proof {
     pub fn verify(proof: &Proof, c: &BigUint, e: &BigUint, g: &BigUint, p: &BigUint) -> bool {
         g.modpow(&proof.z, p) == (&proof.r * c.modpow(e, p)) % p
     }
+}
 
-
+fn challenge(g: &BigUint, c: &BigUint, r: &BigUint, p: &BigUint) -> BigUint {
+    let mut hasher = Sha256::new();
+    hasher.update(g.to_bytes_be());
+    hasher.update(c.to_bytes_be());
+    hasher.update(r.to_bytes_be());
+    let hash = hasher.finalize();
+    BigUint::from_bytes_be(&hash) % p
 }
 
 #[cfg(test)]
@@ -69,4 +77,23 @@ mod tests {
         let proof = Proof {r, z};
         assert!(Proof::verify(&proof, &c, &e, &g, &p));
     }
+
+    #[test]
+    fn test_fiat_shamir() {
+        let p = BigUint::from(223u32);
+        let g = BigUint::from(4u32);
+        let secrect = BigUint::from(123u32);
+        let c = g.modpow(&secrect, &p);
+
+        // Step 1: prover generates commit
+        let (k, r) = prove_commit(&g, &p);
+        // Step 2: verifier obtains challenge
+        let e = challenge(&g, &c, &r, &p);
+        // Step 3: provers computes response
+        let z = prove_response(&k, &e, &secrect);
+        // Step 4: verification
+        let proof = Proof {r, z};
+        assert!(Proof::verify(&proof, &c, &e, &g, &p));
+    }
+
 }
