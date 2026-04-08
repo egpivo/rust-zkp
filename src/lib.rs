@@ -23,7 +23,6 @@ pub struct Proof {
 }
 
 
-
 impl Proof {
     pub fn verify(proof: &Proof, c: &BigUint, e: &BigUint, g: &BigUint, p: &BigUint) -> bool {
         g.modpow(&proof.z, p) == (&proof.r * c.modpow(e, p)) % p
@@ -37,6 +36,18 @@ fn challenge(g: &BigUint, c: &BigUint, r: &BigUint, p: &BigUint) -> BigUint {
     hasher.update(r.to_bytes_be());
     let hash = hasher.finalize();
     BigUint::from_bytes_be(&hash) % p
+}
+
+fn to_bits(n: &BigUint, num_bits: usize) -> Vec<BigUint> {
+    let mut vecs = vec![BigUint::from(0u32); num_bits];
+    let mut a = n.clone();
+    let mut i = 0;
+    while a > BigUint::from(0u32) && i < num_bits {
+        vecs[i] = &a %  BigUint::from(2u32);
+        a /= BigUint::from(2u32);
+        i += 1;
+    }
+    vecs
 }
 
 #[cfg(test)]
@@ -135,6 +146,13 @@ mod tests {
         let wrong_r_total = &r_a + &r_b;
         let wrong_rtotal_rhs = commit(&s, &wrong_r_total, &g, &h, &p);
         assert_ne!(lhs, wrong_rtotal_rhs);
+    }
+
+    #[test]
+    fn test_to_bits() {
+        assert_eq!(
+            to_bits(&BigUint::from(13u32), 4), 
+            vec![BigUint::from(1u32), BigUint::from(0u32), BigUint::from(1u32), BigUint::from(1u32)]);
     }
 
 }
