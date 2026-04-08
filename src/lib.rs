@@ -39,15 +39,12 @@ fn challenge(g: &BigUint, c: &BigUint, r: &BigUint, p: &BigUint) -> BigUint {
 }
 
 fn to_bits(n: &BigUint, num_bits: usize) -> Vec<BigUint> {
-    let mut vecs = vec![BigUint::from(0u32); num_bits];
-    let mut a = n.clone();
-    let mut i = 0;
-    while a > BigUint::from(0u32) && i < num_bits {
-        vecs[i] = &a %  BigUint::from(2u32);
-        a /= BigUint::from(2u32);
-        i += 1;
-    }
-    vecs
+    (0..num_bits)
+        .map(|i| 
+            if n.bit(i as u64) { BigUint::from(1u32) } 
+            else { BigUint::from(0u32) }
+        )
+        .collect()
 }
 
 #[cfg(test)]
@@ -150,9 +147,13 @@ mod tests {
 
     #[test]
     fn test_to_bits() {
+        let expected: Vec<BigUint> = 
+            vec![1u32, 0, 1, 1].into_iter().map(BigUint::from)
+            .collect();
         assert_eq!(
             to_bits(&BigUint::from(13u32), 4), 
-            vec![BigUint::from(1u32), BigUint::from(0u32), BigUint::from(1u32), BigUint::from(1u32)]);
+            expected
+        );
     }
 
 }
