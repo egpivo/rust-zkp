@@ -25,6 +25,26 @@ C_a * C_b * C_c = g^(a+b+c) * h^(r_a+r_b+r_c) mod p
 
 This works because exponent rules: `g^a * g^b = g^(a+b)`.
 
+## Homomorphic Commitment vs Homomorphic Encryption
+
+They belong to the same "homomorphic" family — **operation on ciphertext = operation on plaintext** — but serve different purposes:
+
+| | **Pedersen Commitment** (what we use) | **Homomorphic Encryption (HE / FHE)** |
+|---|------|------|
+| Purpose | Commitment — lock a value, verify later | Encryption — hide a value, compute on it |
+| Supported ops | Addition only (additively homomorphic) | FHE supports addition + multiplication |
+| Reversible? | **No** — hiding is one-way (no secret key to decrypt) | Yes — holder of private key can decrypt |
+| Use case | ZKP, confidential transactions | Privacy-preserving cloud compute |
+| Example | Bitcoin Confidential Transactions, rollup proofs | MIT's Enigma, FHE schemes |
+
+Analogy:
+```
+Pedersen:  commit(a) * commit(b) = commit(a + b)
+FHE:       enc(a) * enc(b)       = enc(a + b)  or  enc(a * b)
+```
+
+**Quick way to remember**: Pedersen is like a weaker, one-way cousin of FHE — only supports addition, and nobody can decrypt (that's a feature, not a bug, for commitments).
+
 ## What the Verifier Does
 
 1. Receives: `C_a, C_b, C_c, S, r_total`
