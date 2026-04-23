@@ -47,6 +47,27 @@ fn to_bits(n: &BigUint, num_bits: usize) -> Vec<BigUint> {
         .collect()
 }
 
+fn hash_pair(left: &BigUint, right: &BigUint) -> BigUint {
+    let mut hasher = Sha256::new();
+    hasher.update(left.to_bytes_be());
+    hasher.update(right.to_bytes_be());
+    BigUint::from_bytes_be(&hasher.finalize())
+}
+
+fn build_tree(leaves: Vec<BigUint>) -> BigUint {
+    let mut level = leaves;
+    while level.len() > 1 {
+        let mut next_level = vec![];
+        for pair in level.chunks(2) {
+            next_level.push(hash_pair(&pair[0], &pair[1]));
+        }
+        level = next_level;
+    }
+    // or level.into_iter().next().unwrap()
+    level.remove(0)
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -210,6 +231,34 @@ mod tests {
         }
         let rhs = commit(&delta, &r_delta, &g, &h, &p);
         assert_eq!(lhs, rhs);
-    }    
+    }
 
+    #[test]
+    fn test_hash_pair() {
+        let a = BigUint::from(3u32);
+        let b = BigUint::from(4u32);
+        let h1 = hash_pair(&a, &b);
+        let h2 = hash_pair(&a, &b);
+        assert_eq!(h1, h2);
+
+        let h3 = hash_pair(&b, &a);
+        assert_ne!(h1, h3);
+    }
+
+    #[test]
+    fn test_build_tree() {
+        let v0 = BigUint::from(3u32);
+        let v1 = BigUint::from(4u32);
+        let v2 = BigUint::from(5u32);
+        let v3 = BigUint::from(6u32);
+
+        let h01 = hash_pair(&v0, &v1);
+        let h23 = hash_pair(&v2, &v3); 
+        let expected_root = hash_pair(&h01, &h23);
+        
+        let leaves = vec![v0, v1, v2, v3];
+        let root = build_tree(leaves);
+
+        assert_eq!(root, expected_root);
+    }
 }
