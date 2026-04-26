@@ -1,4 +1,4 @@
-use zkp::commit;
+use zkp::commitment::commit;
 use num_bigint::BigUint;
 
 fn main() {
