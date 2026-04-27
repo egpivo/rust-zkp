@@ -29,7 +29,7 @@ mod tests {
 
     #[test]
     fn test_prov_sum() {
-        let p = BigUint::from(223u32);
+        let p = BigUint::from(223u32).pow(127);
         let g = BigUint::from(4u32);
         let h = BigUint::from(9u32);
         let mut rng = rand::thread_rng();
