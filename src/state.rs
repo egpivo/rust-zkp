@@ -3,7 +3,7 @@ use num_bigint::BigUint;
 use crate::account::Account;
 use crate::merkle::build_tree;
 use crate::sigma::Proof;
-
+use crate::transaction::Transaction;
 
 #[derive(Debug)]
 pub struct State {
@@ -19,38 +19,34 @@ impl State {
         self.accounts.insert(account.id, account);
     }
 
-    pub fn transfer(
+    pub fn apply_tx(
         &mut self,
-        from: u32,
-        to: u32,
-        amount: u64,
-        proof: &Proof,
-        challenge_e: &BigUint,
+        tx: &Transaction,
         g: &BigUint,
         p: &BigUint,
     ) -> Result<(), String> {
-        let from_balance = self.accounts.get(&from)
+        let from_balance = self.accounts.get(&tx.from)
             .ok_or("from account not found")?
             .balance;
 
-        if from_balance < amount {
+        if from_balance < tx.amount {
             return Err("insufficient balance".to_string());
         }
-        if !self.accounts.contains_key(&to) {
+        if !self.accounts.contains_key(&tx.to) {
             return Err("to account not found".to_string());
         }
 
-        let from_pubkey = &self.accounts[&from].pubkey;
-        if !Proof::verify(proof, from_pubkey, challenge_e, g, p) {
+        let from_pubkey = &self.accounts[&tx.from].pubkey;
+        if !Proof::verify(&tx.proof, from_pubkey, &tx.challenge_e, g, p) {
             return Err("invalid signature".to_string());
         }
         
-        let from_account = self.accounts.get_mut(&from).unwrap();
-        from_account.balance -= amount;
+        let from_account = self.accounts.get_mut(&tx.from).unwrap();
+        from_account.balance -= tx.amount;
         from_account.nonce += 1;
         
-        let to_account = self.accounts.get_mut(&to).unwrap();     
-        to_account.balance += amount;
+        let to_account = self.accounts.get_mut(&tx.to).unwrap();     
+        to_account.balance += tx.amount;
 
         Ok(())
     }
@@ -72,9 +68,10 @@ impl State {
 mod tests {
     use super::*;
     use crate::sigma::{prove_commit, prove_response, challenge, Proof};
+    use crate::transaction::Transaction;
 
     #[test]
-    fn test_transfer_success() {
+    fn test_apply_tx_success() {
         let p = BigUint::from(123u32);
         let g = BigUint::from(4u32);
         let secret = BigUint::from(1232u32);
@@ -88,7 +85,14 @@ mod tests {
         state.add_account(Account::new(1, 100, pubkey.clone()));
         state.add_account(Account::new(2, 50, pubkey.clone()));
 
-        state.transfer(1, 2, 30, &proof, &e, &g, &p).unwrap();
+        let tx = Transaction {
+            from: 1,
+            to: 2,
+            amount: 30,
+            proof: proof,
+            challenge_e: e,
+        };
+        state.apply_tx(&tx, &g, &p).unwrap();
 
         assert_eq!(state.accounts[&1].balance, 70);
         assert_eq!(state.accounts[&2].balance, 80);  
@@ -110,7 +114,14 @@ mod tests {
         state.add_account(Account::new(1, 10, pubkey.clone()));
         state.add_account(Account::new(2, 0, pubkey.clone()));
         
-        let result = state.transfer(1, 2, 100, &proof, &e, &g, &p);
+        let tx = Transaction {
+            from: 1,
+            to: 2,
+            amount: 100,
+            proof: proof,
+            challenge_e: e,
+        };
+        let result = state.apply_tx(&tx, &g, &p);
         assert!(result.is_err());
         assert_eq!(state.accounts[&1].balance, 10);
     }
@@ -129,7 +140,14 @@ mod tests {
         let mut state = State::new();
         state.add_account(Account::new(1, 100, pubkey.clone()));
 
-        let result = state.transfer(1, 999, 10, &proof, &e, &g, &p);
+        let tx = Transaction {
+            from: 1,
+            to: 2,
+            amount: 100,
+            proof: proof,
+            challenge_e: e,
+        };
+        let result = state.apply_tx(&tx, &g, &p);
         assert!(result.is_err());
 
         assert_eq!(state.accounts[&1].balance, 100);
@@ -159,7 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn test_state_root_changes_after_transfer() {
+    fn test_state_root_changes_after_apply_tx() {
         let p = BigUint::from(123u32);
         let g = BigUint::from(4u32);
         let secret = BigUint::from(1232u32);
@@ -176,7 +194,14 @@ mod tests {
         state.add_account(Account::new(2, 10, pubkey.clone()));  
         
         let root_before = state.state_root();
-        state.transfer(1, 2, 30, &proof, &e, &g, &p).unwrap();
+        let tx = Transaction {
+            from: 1,
+            to: 2,
+            amount: 100,
+            proof: proof,
+            challenge_e: e,
+        };        
+        state.apply_tx(&tx, &g, &p).unwrap();
         let root_after = state.state_root();
 
         assert_ne!(root_before, root_after);

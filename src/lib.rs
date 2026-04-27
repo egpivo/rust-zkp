@@ -4,7 +4,7 @@ pub mod bits;
 pub mod merkle;
 pub mod account;
 pub mod state;
-
+pub mod transaction;
 
 #[cfg(test)]
 mod tests {
