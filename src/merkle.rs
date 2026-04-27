@@ -57,8 +57,6 @@ pub fn verify_merkle(leaf: &BigUint, mut index: usize, path: &[BigUint], root: &
 }
 
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;

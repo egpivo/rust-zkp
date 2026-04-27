@@ -1,5 +1,8 @@
 use std::collections::HashMap;
+use num_bigint::BigUint;
 use crate::account::Account;
+use crate::merkle::build_tree;
+
 
 #[derive(Debug)]
 pub struct State {
@@ -36,7 +39,20 @@ impl State {
 
         Ok(())
     }
+
+    pub fn state_root(&self) -> BigUint {
+        let mut ids: Vec<&u32> = self.accounts.keys().collect();
+        ids.sort();
+
+        let leaves: Vec<BigUint> = ids.iter()
+            .map(|id| self.accounts[id].hash())
+            .collect();
+
+        build_tree(leaves)
+    }
 }
+
+
 
 #[cfg(test)]
 mod tests {
@@ -76,5 +92,37 @@ mod tests {
 
         assert_eq!(state.accounts[&1].balance, 100);
         assert_eq!(state.accounts[&1].nonce, 0);
+    }
+
+    #[test]
+    fn test_state_root_deterministic() {
+        let mut state1 = State::new();
+        state1.add_account(Account::new(1, 100));
+        state1.add_account(Account::new(2, 10));
+        state1.add_account(Account::new(3, 200));
+        state1.add_account(Account::new(4, 20));
+        
+        let mut state2 = State::new();
+        state2.add_account(Account::new(3, 200));
+        state2.add_account(Account::new(4, 20));        
+        state2.add_account(Account::new(1, 100));
+        state2.add_account(Account::new(2, 10));
+
+        assert_eq!(state1.state_root(), state2.state_root());
+    }
+
+    #[test]
+    fn test_state_root_changes_after_transfer() {
+        let mut state = State::new();
+        state.add_account(Account::new(3, 200));
+        state.add_account(Account::new(4, 20));        
+        state.add_account(Account::new(1, 100));
+        state.add_account(Account::new(2, 10));  
+        
+        let root_before = state.state_root();
+        state.transfer(1, 2, 30).unwrap();
+        let root_after = state.state_root();
+
+        assert_ne!(root_before, root_after);
     }
 }
