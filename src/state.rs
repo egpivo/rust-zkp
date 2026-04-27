@@ -8,23 +8,20 @@ use crate::transaction::Transaction;
 #[derive(Debug)]
 pub struct State {
     pub accounts: HashMap<u32, Account>,
+    pub g: BigUint,
+    pub p: BigUint,
 }
 
 impl State {
-    pub fn new() -> Self {
-        Self { accounts: HashMap::new() }
+    pub fn new(p: BigUint, g: BigUint) -> Self {
+        Self { accounts: HashMap::new(), p, g }
     }
 
     pub fn add_account(&mut self, account: Account) {
         self.accounts.insert(account.id, account);
     }
 
-    pub fn apply_tx(
-        &mut self,
-        tx: &Transaction,
-        g: &BigUint,
-        p: &BigUint,
-    ) -> Result<(), String> {
+    pub fn apply_tx(&mut self, tx: &Transaction) -> Result<(), String> {
         let from_balance = self.accounts.get(&tx.from)
             .ok_or("from account not found")?
             .balance;
@@ -37,7 +34,7 @@ impl State {
         }
 
         let from_pubkey = &self.accounts[&tx.from].pubkey;
-        if !Proof::verify(&tx.proof, from_pubkey, &tx.challenge_e, g, p) {
+        if !Proof::verify(&tx.proof, from_pubkey, &tx.challenge_e, &self.g, &self.p) {
             return Err("invalid signature".to_string());
         }
         
@@ -81,7 +78,7 @@ mod tests {
         let z = prove_response(&k, &e, &secret);
         let proof = Proof { r, z };
 
-        let mut state = State::new();
+        let mut state = State::new(p.clone(), g.clone());
         state.add_account(Account::new(1, 100, pubkey.clone()));
         state.add_account(Account::new(2, 50, pubkey.clone()));
 
@@ -92,7 +89,7 @@ mod tests {
             proof: proof,
             challenge_e: e,
         };
-        state.apply_tx(&tx, &g, &p).unwrap();
+        state.apply_tx(&tx).unwrap();
 
         assert_eq!(state.accounts[&1].balance, 70);
         assert_eq!(state.accounts[&2].balance, 80);  
@@ -110,7 +107,7 @@ mod tests {
         let z = prove_response(&k, &e, &secret);
         let proof = Proof { r, z };
 
-        let mut state = State::new();
+        let mut state = State::new(p.clone(), g.clone());
         state.add_account(Account::new(1, 10, pubkey.clone()));
         state.add_account(Account::new(2, 0, pubkey.clone()));
         
@@ -121,7 +118,7 @@ mod tests {
             proof: proof,
             challenge_e: e,
         };
-        let result = state.apply_tx(&tx, &g, &p);
+        let result = state.apply_tx(&tx);
         assert!(result.is_err());
         assert_eq!(state.accounts[&1].balance, 10);
     }
@@ -137,7 +134,7 @@ mod tests {
         let z = prove_response(&k, &e, &secret);
         let proof = Proof { r, z };
 
-        let mut state = State::new();
+        let mut state = State::new(p.clone(), g.clone());
         state.add_account(Account::new(1, 100, pubkey.clone()));
 
         let tx = Transaction {
@@ -147,7 +144,7 @@ mod tests {
             proof: proof,
             challenge_e: e,
         };
-        let result = state.apply_tx(&tx, &g, &p);
+        let result = state.apply_tx(&tx);
         assert!(result.is_err());
 
         assert_eq!(state.accounts[&1].balance, 100);
@@ -161,13 +158,13 @@ mod tests {
         let secret = BigUint::from(1232u32);
         let pubkey = g.modpow(&secret, &p);
         
-        let mut state1 = State::new();
+        let mut state1 = State::new(p.clone(), g.clone());
         state1.add_account(Account::new(1, 100, pubkey.clone()));
         state1.add_account(Account::new(2, 10, pubkey.clone()));
         state1.add_account(Account::new(3, 200, pubkey.clone()));
         state1.add_account(Account::new(4, 20, pubkey.clone()));
         
-        let mut state2 = State::new();
+        let mut state2 = State::new(p.clone(), g.clone());
         state2.add_account(Account::new(3, 200, pubkey.clone()));
         state2.add_account(Account::new(4, 20, pubkey.clone()));        
         state2.add_account(Account::new(1, 100, pubkey.clone()));
@@ -187,7 +184,7 @@ mod tests {
         let z = prove_response(&k, &e, &secret);
         let proof = Proof { r, z };
       
-        let mut state = State::new();
+        let mut state = State::new(p.clone(), g.clone());
         state.add_account(Account::new(3, 200, pubkey.clone()));
         state.add_account(Account::new(4, 20, pubkey.clone()));        
         state.add_account(Account::new(1, 100, pubkey.clone()));
@@ -201,7 +198,7 @@ mod tests {
             proof: proof,
             challenge_e: e,
         };        
-        state.apply_tx(&tx, &g, &p).unwrap();
+        state.apply_tx(&tx).unwrap();
         let root_after = state.state_root();
 
         assert_ne!(root_before, root_after);
