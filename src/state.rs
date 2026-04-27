@@ -60,34 +60,46 @@ impl State {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sigma::{prove_commit, prove_response, challenge, Proof};
+    use crate::sigma::{prove_commit, prove_response, challenge};
     use crate::transaction::Transaction;
 
-    #[test]
-    fn test_apply_tx_success() {
-        let p = BigUint::from(123u32);
+    struct TestCtx {
+        p: BigUint,
+        g: BigUint,
+        pubkey: BigUint,
+        proof: Proof,
+        e: BigUint,
+    }
+
+    fn test_setup() -> TestCtx {
+        let p = BigUint::from(223u32);
         let g = BigUint::from(4u32);
-        let secret = BigUint::from(1232u32);
+        let secret = BigUint::from(2232u32);
         let pubkey = g.modpow(&secret, &p);
         let (k, r) = prove_commit(&g, &p);
         let e = challenge(&g, &pubkey, &r, &p);
         let z = prove_response(&k, &e, &secret);
         let proof = Proof { r, z };
+        TestCtx { p, g, pubkey, proof, e }
+    }
 
-        let mut state = State::new(p.clone(), g.clone());
-        state.add_account(Account::new(1, 100, pubkey.clone()));
-        state.add_account(Account::new(2, 50, pubkey.clone()));
+    #[test]
+    fn test_apply_tx_success() {
+        let testctx = test_setup();
+
+        let mut state = State::new(testctx.p.clone(), testctx.g.clone());
+        state.add_account(Account::new(1, 100, testctx.pubkey.clone()));
+        state.add_account(Account::new(2, 50, testctx.pubkey.clone()));
 
         let tx = Transaction {
             from: 1,
             to: 2,
             amount: 30,
-            proof: proof,
-            challenge_e: e,
+            proof: testctx.proof,
+            challenge_e: testctx.e,
         };
         state.apply_tx(&tx).unwrap();
 
@@ -98,25 +110,17 @@ mod tests {
 
     #[test]
     fn test_insufficient_balance() {
-        let p = BigUint::from(123u32);
-        let g = BigUint::from(4u32);
-        let secret = BigUint::from(1232u32);
-        let pubkey = g.modpow(&secret, &p);
-        let (k, r) = prove_commit(&g, &p);
-        let e = challenge(&g, &pubkey, &r, &p);
-        let z = prove_response(&k, &e, &secret);
-        let proof = Proof { r, z };
-
-        let mut state = State::new(p.clone(), g.clone());
-        state.add_account(Account::new(1, 10, pubkey.clone()));
-        state.add_account(Account::new(2, 0, pubkey.clone()));
+        let testctx = test_setup();
+        let mut state = State::new(testctx.p.clone(), testctx.g.clone());
+        state.add_account(Account::new(1, 10, testctx.pubkey.clone()));
+        state.add_account(Account::new(2, 0, testctx.pubkey.clone()));
         
         let tx = Transaction {
             from: 1,
             to: 2,
             amount: 100,
-            proof: proof,
-            challenge_e: e,
+            proof: testctx.proof,
+            challenge_e: testctx.e,
         };
         let result = state.apply_tx(&tx);
         assert!(result.is_err());
@@ -125,24 +129,16 @@ mod tests {
 
     #[test]
     fn test_to_account_missing() {
-        let p = BigUint::from(123u32);
-        let g = BigUint::from(4u32);
-        let secret = BigUint::from(1232u32);
-        let pubkey = g.modpow(&secret, &p);
-        let (k, r) = prove_commit(&g, &p);
-        let e = challenge(&g, &pubkey, &r, &p);
-        let z = prove_response(&k, &e, &secret);
-        let proof = Proof { r, z };
-
-        let mut state = State::new(p.clone(), g.clone());
-        state.add_account(Account::new(1, 100, pubkey.clone()));
+        let testctx = test_setup();
+        let mut state = State::new(testctx.p.clone(), testctx.g.clone());
+        state.add_account(Account::new(1, 100, testctx.pubkey.clone()));
 
         let tx = Transaction {
             from: 1,
             to: 2,
             amount: 100,
-            proof: proof,
-            challenge_e: e,
+            proof: testctx.proof,
+            challenge_e: testctx.e,
         };
         let result = state.apply_tx(&tx);
         assert!(result.is_err());
@@ -153,50 +149,40 @@ mod tests {
 
     #[test]
     fn test_state_root_deterministic() {
-        let p = BigUint::from(123u32);
-        let g = BigUint::from(4u32);
-        let secret = BigUint::from(1232u32);
-        let pubkey = g.modpow(&secret, &p);
+        let testctx = test_setup();
         
-        let mut state1 = State::new(p.clone(), g.clone());
-        state1.add_account(Account::new(1, 100, pubkey.clone()));
-        state1.add_account(Account::new(2, 10, pubkey.clone()));
-        state1.add_account(Account::new(3, 200, pubkey.clone()));
-        state1.add_account(Account::new(4, 20, pubkey.clone()));
+        let mut state1 = State::new(testctx.p.clone(), testctx.g.clone());
+        state1.add_account(Account::new(1, 100, testctx.pubkey.clone()));
+        state1.add_account(Account::new(2, 10, testctx.pubkey.clone()));
+        state1.add_account(Account::new(3, 200, testctx.pubkey.clone()));
+        state1.add_account(Account::new(4, 20, testctx.pubkey.clone()));
         
-        let mut state2 = State::new(p.clone(), g.clone());
-        state2.add_account(Account::new(3, 200, pubkey.clone()));
-        state2.add_account(Account::new(4, 20, pubkey.clone()));        
-        state2.add_account(Account::new(1, 100, pubkey.clone()));
-        state2.add_account(Account::new(2, 10, pubkey.clone()));
+        let mut state2 = State::new(testctx.p.clone(), testctx.g.clone());
+        state2.add_account(Account::new(3, 200, testctx.pubkey.clone()));
+        state2.add_account(Account::new(4, 20, testctx.pubkey.clone()));        
+        state2.add_account(Account::new(1, 100, testctx.pubkey.clone()));
+        state2.add_account(Account::new(2, 10, testctx.pubkey.clone()));
 
         assert_eq!(state1.state_root(), state2.state_root());
     }
 
     #[test]
     fn test_state_root_changes_after_apply_tx() {
-        let p = BigUint::from(123u32);
-        let g = BigUint::from(4u32);
-        let secret = BigUint::from(1232u32);
-        let pubkey = g.modpow(&secret, &p);
-        let (k, r) = prove_commit(&g, &p);
-        let e = challenge(&g, &pubkey, &r, &p);
-        let z = prove_response(&k, &e, &secret);
-        let proof = Proof { r, z };
+        let testctx = test_setup();
       
-        let mut state = State::new(p.clone(), g.clone());
-        state.add_account(Account::new(3, 200, pubkey.clone()));
-        state.add_account(Account::new(4, 20, pubkey.clone()));        
-        state.add_account(Account::new(1, 100, pubkey.clone()));
-        state.add_account(Account::new(2, 10, pubkey.clone()));  
+        let mut state = State::new(testctx.p.clone(), testctx.g.clone());
+        state.add_account(Account::new(3, 200, testctx.pubkey.clone()));
+        state.add_account(Account::new(4, 20, testctx.pubkey.clone()));        
+        state.add_account(Account::new(1, 100, testctx.pubkey.clone()));
+        state.add_account(Account::new(2, 10, testctx.pubkey.clone()));  
         
         let root_before = state.state_root();
         let tx = Transaction {
             from: 1,
             to: 2,
             amount: 100,
-            proof: proof,
-            challenge_e: e,
+            proof: testctx.proof,
+            challenge_e: testctx.e,
         };        
         state.apply_tx(&tx).unwrap();
         let root_after = state.state_root();
