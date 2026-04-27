@@ -50,9 +50,9 @@ mod tests {
 
         state.transfer(1, 2, 30).unwrap();
 
-        assert_eq!(state.account[&1].balance, 70);
-        assert_eq!(state.account[&2].balance, 80);  
-        assert_eq!(state.account[&1].nonce, 1);    
+        assert_eq!(state.accounts[&1].balance, 70);
+        assert_eq!(state.accounts[&2].balance, 80);  
+        assert_eq!(state.accounts[&1].nonce, 1);    
     }
 
     #[test]
@@ -63,7 +63,7 @@ mod tests {
         
         let result = state.transfer(1, 2, 100);
         assert!(result.is_err());
-        assert_eq!(state.account[&1].balance, 10);
+        assert_eq!(state.accounts[&1].balance, 10);
     }
 
     #[test]
@@ -74,7 +74,7 @@ mod tests {
         let result = state.transfer(1, 999, 10);
         assert!(result.is_err());
 
-        assert_eq!(state.account[&1].balance, 100);
-        assert_eq!(state.account[&1].nonce, 0);
+        assert_eq!(state.accounts[&1].balance, 100);
+        assert_eq!(state.accounts[&1].nonce, 0);
     }
 }

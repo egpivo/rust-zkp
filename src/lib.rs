@@ -2,6 +2,8 @@ pub mod commitment;
 pub mod sigma;
 pub mod bits;
 pub mod merkle;
+pub mod account;
+pub mod state;
 
 
 #[cfg(test)]
