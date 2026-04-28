@@ -5,6 +5,7 @@ pub mod merkle;
 pub mod account;
 pub mod state;
 pub mod transaction;
+pub mod batch;
 
 #[cfg(test)]
 mod tests {

@@ -4,6 +4,7 @@ use crate::account::Account;
 use crate::merkle::build_tree;
 use crate::sigma::{Proof, challenge_for_tx};
 use crate::transaction::Transaction;
+use crate::batch::Batch;
 
 #[derive(Debug)]
 pub struct State {
@@ -59,6 +60,27 @@ impl State {
 
         build_tree(leaves)
     }
+
+
+    pub fn apply_batch(&mut self, batch: &Batch) -> Result<(), String> {
+        if self.state_root() != batch.state_root_before {
+            return Err("incorrect state root".to_string());
+        }
+        let snapshot = self.accounts.clone();
+        for tx in &batch.txs {
+            if let Err(e) = self.apply_tx(&tx) {
+                self.accounts = snapshot;
+                return Err(e);
+            }
+        }
+        if self.state_root() != batch.state_root_after {
+            self.accounts = snapshot;            
+            return Err("incorrect state root".to_string());
+        }     
+
+        Ok(())
+    }    
+
 }
 
 #[cfg(test)]
@@ -251,5 +273,54 @@ mod tests {
         let root_after = state.state_root();
 
         assert_ne!(root_before, root_after);
+    }
+
+    #[test]
+    fn test_apply_batch() {
+        let TestCtx { p, g, secret, pubkey} = test_setup();
+        let mut state = State::new(p.clone(), g.clone());
+        state.add_account(Account::new(3, 200, pubkey.clone()));
+        state.add_account(Account::new(4, 20, pubkey.clone()));        
+        state.add_account(Account::new(1, 100, pubkey.clone()));
+        state.add_account(Account::new(2, 10, pubkey.clone()));  
+        
+        let root_before = state.state_root();
+        let make_tx = |from, to, amount, nonce| {
+            let mut msg = vec![];
+            msg.extend((from as u32).to_be_bytes());
+            msg.extend((to as u32).to_be_bytes());
+            msg.extend((amount as u64).to_be_bytes());
+            msg.extend((nonce as u64).to_be_bytes());
+            let (proof, e) = sign_tx(&p, &g, &secret, &pubkey, &msg);
+            Transaction { from, to, amount, nonce, proof, challenge_e: e, }
+        };
+        let tx1 = make_tx(1u32, 2u32, 30u64, 1u64);
+        let tx2 = make_tx(2u32, 3u32, 30u64, 1u64);
+
+        let mut sim = State::new(p.clone(), g.clone());
+        sim.add_account(Account::new(3, 200, pubkey.clone()));
+        sim.add_account(Account::new(4, 20, pubkey.clone()));        
+        sim.add_account(Account::new(1, 100, pubkey.clone()));
+        sim.add_account(Account::new(2, 10, pubkey.clone()));
+        sim.apply_tx(&tx1).unwrap();
+        sim.apply_tx(&tx2).unwrap();
+        let root_after = sim.state_root();
+
+        let batch = Batch {
+            txs: vec![tx1, tx2],
+            state_root_before: root_before,
+            state_root_after: root_after.clone(),
+        };
+        state.apply_batch(&batch).unwrap();
+
+        assert_eq!(state.accounts[&1].balance, 70);
+        assert_eq!(state.accounts[&2].balance, 10); 
+        assert_eq!(state.accounts[&3].balance, 230); 
+        assert_eq!(state.accounts[&4].balance, 20);  
+    
+        assert_eq!(state.state_root(), root_after); 
+
+        assert_eq!(state.accounts[&1].nonce, 1);
+        assert_eq!(state.accounts[&2].nonce, 1);        
     }
 }
