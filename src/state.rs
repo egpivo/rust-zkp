@@ -5,6 +5,8 @@ use crate::merkle::build_tree;
 use crate::sigma::{Proof, challenge_for_tx};
 use crate::transaction::Transaction;
 use crate::batch::Batch;
+use crate::error::RollupError;
+
 
 #[derive(Debug)]
 pub struct State {
@@ -22,22 +24,22 @@ impl State {
         self.accounts.insert(account.id, account);
     }
 
-    pub fn apply_tx(&mut self, tx: &Transaction) -> Result<(), String> {
+    pub fn apply_tx(&mut self, tx: &Transaction) -> Result<(), RollupError> {
         let from_balance = self.accounts.get(&tx.from)
-            .ok_or("from account not found")?
+            .ok_or(RollupError::AccountNotFound { id: tx.from })?
             .balance;
 
         if from_balance < tx.amount {
-            return Err("insufficient balance".to_string());
+            return Err(RollupError::InsufficientBalance { available: from_balance, requested: tx.amount });
         }
         if !self.accounts.contains_key(&tx.to) {
-            return Err("to account not found".to_string());
+            return Err(RollupError::AccountNotFound { id: tx.to });
         }
 
         let from_pubkey = &self.accounts[&tx.from].pubkey;
         let e = challenge_for_tx(&self.g, &from_pubkey, &tx.proof.r, &self.p, &tx.message_to_bytes());
         if !Proof::verify(&tx.proof, from_pubkey, &e, &self.g, &self.p) {
-            return Err("invalid signature".to_string());
+            return Err(RollupError::InvalidSignature);
         }
         
         let from_account = self.accounts.get_mut(&tx.from).unwrap();
@@ -62,9 +64,9 @@ impl State {
     }
 
 
-    pub fn apply_batch(&mut self, batch: &Batch) -> Result<(), String> {
+    pub fn apply_batch(&mut self, batch: &Batch) -> Result<(), RollupError> {
         if self.state_root() != batch.state_root_before {
-            return Err("incorrect state root".to_string());
+            return Err(RollupError::StateRootMismatch);
         }
         let snapshot = self.accounts.clone();
         for tx in &batch.txs {
@@ -75,7 +77,7 @@ impl State {
         }
         if self.state_root() != batch.state_root_after {
             self.accounts = snapshot;            
-            return Err("incorrect state root".to_string());
+            return Err(RollupError::StateRootMismatch);
         }     
 
         Ok(())
@@ -180,8 +182,10 @@ mod tests {
             challenge_e: e,
         };       
 
-        let result = state.apply_tx(&tx);
-        assert!(result.is_err());
+        assert!(matches!(
+            state.apply_tx(&tx),
+            Err(RollupError::InsufficientBalance {available: 10, requested: 100} )
+        ));
         assert_eq!(state.accounts[&1].balance, 10);
     }
 
@@ -212,9 +216,10 @@ mod tests {
             challenge_e: e,
         };  
 
-        let result = state.apply_tx(&tx);
-        assert!(result.is_err());
-
+        assert!(matches!(
+            state.apply_tx(&tx),
+            Err(RollupError::AccountNotFound { .. })
+        ));
         assert_eq!(state.accounts[&1].balance, 100);
         assert_eq!(state.accounts[&1].nonce, 0);
     }

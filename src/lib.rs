@@ -6,6 +6,8 @@ pub mod account;
 pub mod state;
 pub mod transaction;
 pub mod batch;
+pub mod error;
+
 
 #[cfg(test)]
 mod tests {
