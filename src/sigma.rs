@@ -1,7 +1,6 @@
 use num_bigint::{BigUint, RandBigInt};
 use sha2::{Sha256, Digest};
 
-
 pub fn prove_commit(g: &BigUint, p: &BigUint) -> (BigUint, BigUint) {
     let mut rng = rand::thread_rng();
     let k = rng.gen_biguint_below(p);
@@ -35,6 +34,20 @@ pub fn challenge(g: &BigUint, c: &BigUint, r: &BigUint, p: &BigUint) -> BigUint 
     BigUint::from_bytes_be(&hash) % p
 }
 
+pub fn challenge_for_tx(
+    g: &BigUint,
+    pubkey: &BigUint, 
+    r: &BigUint, 
+    p: &BigUint, 
+    message: &[u8]
+) -> BigUint {
+    let mut hasher = Sha256::new();
+    hasher.update(g.to_bytes_be());
+    hasher.update(pubkey.to_bytes_be());
+    hasher.update(r.to_bytes_be());    
+    hasher.update(message);
+    BigUint::from_bytes_be(&hasher.finalize()) % p
+}
 
 
 #[cfg(test)]
