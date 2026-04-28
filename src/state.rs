@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use num_bigint::BigUint;
+use rayon::prelude::*;
+
 use crate::account::Account;
 use crate::merkle::build_tree;
 use crate::sigma::{Proof, challenge_for_tx};
@@ -81,7 +83,23 @@ impl State {
         }     
 
         Ok(())
-    }    
+    }
+
+    pub fn verify_batch_parallel(&self, txs: &[Transaction]) -> Vec<bool> {
+        txs.par_iter()
+            .map(|tx| self.verify_tx_signature(tx))
+            .collect()
+
+    }
+
+    fn verify_tx_signature(&self, tx: &Transaction) -> bool {
+        let from_pubkey = match self.accounts.get(&tx.from) {
+            Some(a) => &a.pubkey,
+            None => return false,
+        };
+        let e = challenge_for_tx(&self.g, from_pubkey, &tx.proof.r, &self.p, &tx.message_to_bytes());
+        Proof::verify(&tx.proof, from_pubkey, &e, &self.g, &self.p) 
+     }
 
 }
 
@@ -327,5 +345,30 @@ mod tests {
 
         assert_eq!(state.accounts[&1].nonce, 1);
         assert_eq!(state.accounts[&2].nonce, 1);        
+    }
+
+    #[test]
+    fn test_parallel_signature_verification() {
+        let TestCtx { p, g, secret, pubkey} = test_setup();
+        let mut state = State::new(p.clone(), g.clone());
+        state.add_account(Account::new(1, 200, pubkey.clone()));
+        state.add_account(Account::new(2, 20, pubkey.clone()));
+        
+        let txs: Vec<Transaction> = (0..10).map(|i| {
+            let from = 1u32;
+            let to = 2u32;
+            let amount = 1u64;
+            let nonce = i as u64;
+            let mut msg = vec![];
+            msg.extend(from.to_be_bytes());
+            msg.extend(to.to_be_bytes());
+            msg.extend(amount.to_be_bytes());
+            msg.extend(nonce.to_be_bytes());
+            let (proof, e) = sign_tx(&p, &g, &secret, &pubkey, &msg);
+            Transaction { from, to, amount, nonce, proof, challenge_e: e }
+        }).collect();
+
+        let results = state.verify_batch_parallel(&txs);
+        assert!(results.iter().all(|&v| v));
     }
 }
