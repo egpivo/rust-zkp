@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ZKP Playground</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+    label { display: block; margin: 8px 0; }
+    input { width: 80px; }
+    button { margin-top: 12px; padding: 8px 16px; }
+    pre { background: #f0f0f0; padding: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Pedersen Commitment</h1>
+  <p><code>commit(v, r) = g^v * h^r mod p</code></p>
+
+  <label>v (value): <input id="v" value="3"></label>
+  <label>r (blinding): <input id="r" value="5"></label>
+  <label>g: <input id="g" value="4"></label>
+  <label>h: <input id="h" value="9"></label>
+  <label>p: <input id="p" value="23"></label>
+  
+  <button id="commit-btn">Commit</button>
+  <pre id="result"></pre>
+
+  <script type="module">
+    import init, { pedersen_commit } from './pkg/zkp.js';
+    
+    await init();
+    
+    document.getElementById('commit-btn').addEventListener('click', () => {
+      const v = document.getElementById('v').value;
+      const r = document.getElementById('r').value;
+      const g = document.getElementById('g').value;
+      const h = document.getElementById('h').value;
+      const p = document.getElementById('p').value;
+      
+      try {
+        const result = pedersen_commit(v, r, g, h, p);
+        document.getElementById('result').innerText = `commit = ${result}`;
+      } catch (e) {
+        document.getElementById('result').innerText = `Error: ${e}`;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -3,11 +3,18 @@ pub mod sigma;
 pub mod bits;
 pub mod merkle;
 pub mod account;
-pub mod state;
 pub mod transaction;
 pub mod batch;
-pub mod error;
+
+#[cfg(feature = "server")]
+pub mod state;
+#[cfg(feature = "server")]
 pub mod storage;
+#[cfg(feature = "server")]
+pub mod error;
+
+#[cfg(feature = "wasm")]
+pub mod wasm;
 
 
 #[cfg(test)]
