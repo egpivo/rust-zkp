@@ -113,7 +113,7 @@ async fn main() {
             msg.extend(nonce.to_be_bytes());    
             
             // Sign (sigma protocal)
-            let (k, r) = prove_commit(&g, &g);
+            let (k, r) = prove_commit(&g, &p);
             let e = challenge_for_tx(&g, &pubkey, &r, &p, &msg);
             let z = prove_response(&k, &e, &secret_big);
             let proof = Proof { r, z };
