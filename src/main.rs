@@ -3,22 +3,36 @@ use axum::{
     routing::{get, post},
     Router,
     Json,
-    http::StatusCode
 };
 use num_bigint::BigUint;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use zkp::account::Account;
 use zkp::state::State as RollupState;
 use zkp::transaction::Transaction;
 use zkp::storage::Storage;
+use zkp::error::RollupError;
 
 
 #[derive(Clone)]
 struct AppState {
     rollup: Arc<Mutex<RollupState>>,
     storage: Arc<Storage>,
+}
+
+#[derive(Serialize)]
+struct ParamsResponse {
+    p: BigUint,
+    g: BigUint,
+}
+
+async fn get_params(State(state): State<AppState>) -> Json<ParamsResponse> {
+    let s = state.rollup.lock().await;
+    Json(ParamsResponse {
+        p: s.p.clone(),
+        g: s.g.clone(),
+    })    
 }
 
 #[derive(Debug, Deserialize)]
@@ -41,19 +55,14 @@ async fn create_account(
 async fn submit_tx(
     State(state): State<AppState>,
     Json(tx): Json<Transaction>,
-) -> Result<String, (StatusCode, String)> {
+) -> Result<String, RollupError> {
     let mut s = state.rollup.lock().await;
-    match s.apply_tx(&tx) {
-        Ok(()) => {
-            state.storage.save_accounts(&[
-                &s.accounts[&tx.from],
-                &s.accounts[&tx.to],
-            ]).unwrap();
-            Ok("tx applied".to_string())
-
-        }
-        Err(e) => Err((StatusCode::BAD_REQUEST, format!("{:?}", e))),
-    }
+    s.apply_tx(&tx)?;
+    state.storage.save_accounts(&[
+        &s.accounts[&tx.from],
+        &s.accounts[&tx.to],
+    ]).unwrap();
+    Ok("tx applied".to_string())
 }
 
 async fn health() -> &'static str {
@@ -116,6 +125,7 @@ async fn main() {
         .route("/balance/{id}", get(get_balance))
         .route("/tx", post(submit_tx))
         .route("/accounts", post(create_account))
+        .route("/params", get(get_params))
         .with_state(app_state);
     
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

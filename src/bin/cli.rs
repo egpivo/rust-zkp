@@ -50,6 +50,17 @@ enum Command {
     },
 }
 
+#[derive(serde::Deserialize)]
+struct ParamsResponse {
+    p: BigUint,
+    g: BigUint,
+}
+
+async fn fetch_params(server: &str) -> ParamsResponse {
+    let url = format!("{}/params", server);
+    reqwest::get(&url).await.unwrap()
+        .json::<ParamsResponse>().await.unwrap()
+}
 
 #[tokio::main]
 async fn main() {
@@ -68,13 +79,10 @@ async fn main() {
         }
 
         Command::Register { id, balance, secret } => {
-            // System parameters
-            let p = BigUint::from(223u32);
-            let g = BigUint::from(4u32);
-
+            let params = fetch_params(&cli.server).await;
             // Compute pubkey = g^secret mod p
             let secret_big = BigUint::from(secret);
-            let pubkey = g.modpow(&secret_big, &p);
+            let pubkey = params.g.modpow(&secret_big, &params.p);
 
             // POST to /accounts
             let url = format!("{}/accounts", cli.server);
@@ -97,13 +105,9 @@ async fn main() {
             println!("{}", resp);
         }
         Command::Send { from, to, amount, nonce, secret } => {
-            // System params
-            let p = BigUint::from(223u32);
-            let g = BigUint::from(4u32);
-
-            // Compute pubkey
+            let params = fetch_params(&cli.server).await;
             let secret_big = BigUint::from(secret);
-            let pubkey = g.modpow(&secret_big, &p);
+            let pubkey = params.g.modpow(&secret_big, &params.p);
 
             // Build the unsigned message
             let mut msg = vec![];
@@ -113,8 +117,8 @@ async fn main() {
             msg.extend(nonce.to_be_bytes());    
             
             // Sign (sigma protocal)
-            let (k, r) = prove_commit(&g, &p);
-            let e = challenge_for_tx(&g, &pubkey, &r, &p, &msg);
+            let (k, r) = prove_commit(&params.g, &params.p);
+            let e = challenge_for_tx(&params.g, &pubkey, &r, &params.p, &msg);
             let z = prove_response(&k, &e, &secret_big);
             let proof = Proof { r, z };
 
