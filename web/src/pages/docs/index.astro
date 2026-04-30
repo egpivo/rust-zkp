@@ -1,0 +1,103 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const base = import.meta.env.BASE_URL;
+
+interface DocSection {
+  title: string;
+  items: { slug: string; title: string; desc: string }[];
+}
+
+const sections: DocSection[] = [
+  {
+    title: "ZKP Exercises",
+    items: [
+      { slug: "ex1_preimage", title: "Ex1: Knowledge of Preimage", desc: "Sigma protocol & Fiat-Shamir" },
+      { slug: "ex2_sum", title: "Ex2: Sum is Computed Correctly", desc: "Homomorphic commitments" },
+      { slug: "ex3_threshold", title: "Ex3: Threshold Check", desc: "Range proofs via bit decomposition" },
+      { slug: "ex4_membership", title: "Ex4: Membership", desc: "Merkle tree membership proofs" },
+    ],
+  },
+  {
+    title: "Composing the Rollup",
+    items: [
+      { slug: "mini_rollup", title: "Mini Rollup Architecture", desc: "Composing the primitives" },
+      { slug: "batch_processing", title: "Batch Processing", desc: "Atomic apply-many semantics" },
+      { slug: "zkp_in_blockchain", title: "ZKP in Blockchain", desc: "How rollups use ZKP in practice" },
+    ],
+  },
+  {
+    title: "Backend Layer",
+    items: [
+      { slug: "backend_basics", title: "Backend Basics", desc: "axum HTTP server fundamentals" },
+      { slug: "backend_post_endpoints", title: "POST Endpoints", desc: "JSON, serde, error responses" },
+      { slug: "rust_async_primer", title: "Rust Async Primer", desc: "async / await / tokio mental model" },
+      { slug: "persistence", title: "Persistence with sled", desc: "KV database, recovery, atomicity" },
+    ],
+  },
+];
+---
+
+<Layout title="Docs">
+  <h1>Documentation</h1>
+  <p class="subtitle">
+    Standalone walkthroughs of every concept — math, intuition, where it breaks, and the Rust patterns used.
+  </p>
+
+  {sections.map(section => (
+    <section class="section">
+      <h2>{section.title}</h2>
+      <ul class="doc-list">
+        {section.items.map(item => (
+          <li>
+            <a href={`${base}/docs/${item.slug}`}>
+              <strong>{item.title}</strong>
+              <span>{item.desc}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+
+  <style>
+    .subtitle {
+      color: var(--fg-muted);
+      margin-top: -8px;
+    }
+    .section {
+      margin-top: 32px;
+    }
+    .doc-list {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0 0;
+    }
+    .doc-list li {
+      margin: 0 0 6px;
+    }
+    .doc-list a {
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: white;
+      text-decoration: none;
+      color: var(--fg);
+      transition: border-color 0.1s, background 0.1s;
+    }
+    .doc-list a:hover {
+      border-color: var(--accent);
+      background: #f5faff;
+    }
+    .doc-list strong {
+      font-weight: 600;
+    }
+    .doc-list span {
+      color: var(--fg-muted);
+      font-size: 0.92em;
+      margin-top: 2px;
+    }
+  </style>
+</Layout>

@@ -1,0 +1,108 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const base = import.meta.env.BASE_URL;
+
+const demos = [
+  {
+    slug: "commit",
+    title: "Pedersen Commitment",
+    desc: "Commit to a value with a blinding factor. Hiding + binding.",
+    status: "live",
+  },
+  {
+    slug: "sigma",
+    title: "Sigma Protocol",
+    desc: "Prove knowledge of a discrete log without revealing it.",
+    status: "soon",
+  },
+  {
+    slug: "merkle",
+    title: "Merkle Membership",
+    desc: "Prove an element belongs to a set using only the root.",
+    status: "soon",
+  },
+  {
+    slug: "range",
+    title: "Range Proof",
+    desc: "Prove a value is in a range via bit decomposition.",
+    status: "soon",
+  },
+];
+---
+
+<Layout title="Playground">
+  <h1>Playground</h1>
+  <p class="subtitle">
+    Interactive demos powered by the Rust ZKP library compiled to WebAssembly.
+    All computation runs in your browser — nothing is sent to a server.
+  </p>
+
+  <div class="demo-grid">
+    {demos.map(demo => (
+      <a
+        href={demo.status === "live" ? `${base}/demos/${demo.slug}` : "#"}
+        class={`demo-card ${demo.status}`}
+        aria-disabled={demo.status !== "live"}
+      >
+        <div class="header">
+          <h3>{demo.title}</h3>
+          {demo.status !== "live" && <span class="badge">coming soon</span>}
+        </div>
+        <p>{demo.desc}</p>
+      </a>
+    ))}
+  </div>
+
+  <style>
+    .subtitle { color: var(--fg-muted); margin-top: -8px; }
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 32px;
+    }
+    .demo-card {
+      display: block;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      text-decoration: none;
+      color: var(--fg);
+      transition: border-color 0.1s, background 0.1s;
+    }
+    .demo-card.live:hover {
+      border-color: var(--accent);
+      background: #f5faff;
+    }
+    .demo-card.soon {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .demo-card .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .demo-card h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+    .demo-card .badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      background: var(--code-bg);
+      border-radius: 999px;
+      color: var(--fg-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .demo-card p {
+      margin: 0;
+      color: var(--fg-muted);
+      font-size: 0.95rem;
+    }
+  </style>
+</Layout>

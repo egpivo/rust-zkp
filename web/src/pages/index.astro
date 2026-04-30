@@ -1,0 +1,118 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Home">
+  <section class="hero">
+    <h1>rust-zkp</h1>
+    <p class="lead">
+      A learning project that builds a minimal ZK-Rollup from scratch in Rust —
+      no SNARK frameworks, just the cryptographic primitives composed by hand.
+    </p>
+    <div class="cta">
+      <a href={`${base}/docs/`} class="btn primary">Read the docs</a>
+      <a href={`${base}/demos/`} class="btn">Try the playground</a>
+    </div>
+  </section>
+
+  <section class="features">
+    <h2>What's inside</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>ZKP primitives</h3>
+        <p>Pedersen commitment, Sigma protocol, Fiat-Shamir, Merkle membership, range proofs.</p>
+      </div>
+      <div class="card">
+        <h3>Mini rollup</h3>
+        <p>Account state, signed transactions with replay protection, atomic batch processing.</p>
+      </div>
+      <div class="card">
+        <h3>Backend stack</h3>
+        <p>HTTP API server (axum), CLI client (clap), persistent storage (sled), CI/CD.</p>
+      </div>
+      <div class="card">
+        <h3>WASM playground</h3>
+        <p>Try the cryptographic primitives in your browser — running real Rust code via WebAssembly.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <h2>Approach</h2>
+    <p>
+      Most ZKP tutorials either show toy code or jump straight to SNARK frameworks.
+      This project deliberately sits in the middle: build every primitive yourself,
+      compose them into a working system, and understand why each piece exists.
+    </p>
+    <p>
+      The cryptography is intentionally simplified (small primes instead of elliptic curves,
+      direct verification instead of SNARKs) to keep the focus on architecture and
+      protocol design. See <a href={`${base}/docs/mini_rollup`}>this note</a> for what's
+      production-grade and what's not.
+    </p>
+  </section>
+
+  <style>
+    .hero {
+      padding: 32px 0 48px;
+    }
+    .hero h1 {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    .lead {
+      font-size: 1.15rem;
+      color: var(--fg-muted);
+      max-width: 640px;
+    }
+    .cta {
+      margin-top: 24px;
+      display: flex;
+      gap: 12px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 10px 18px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--fg);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn.primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    .btn.primary:hover { color: white; opacity: 0.9; }
+    .features {
+      margin-top: 48px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .card {
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: white;
+    }
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+    }
+    .card p {
+      margin: 0;
+      color: var(--fg-muted);
+      font-size: 0.95rem;
+    }
+  </style>
+</Layout>

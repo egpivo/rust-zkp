@@ -33,16 +33,31 @@ jobs:
       - name: Build WASM
         run: wasm-pack build --target web --no-default-features --features wasm
 
-      - name: Stage site
+      - name: Copy WASM into web/public
         run: |
-          mkdir -p _site
-          cp -r web/* _site/
-          cp -r pkg _site/pkg
+          rm -rf web/public/pkg
+          mkdir -p web/public
+          cp -r pkg web/public/pkg
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Astro deps
+        run: npm ci
+        working-directory: web
+
+      - name: Build Astro
+        run: npm run build
+        working-directory: web
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./_site
+          path: ./web/dist
 
   deploy:
     needs: build

@@ -1,0 +1,153 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Pedersen Commitment Demo">
+  <a href={`${base}/demos/`} class="back">← Playground</a>
+  <h1>Pedersen Commitment</h1>
+  <p class="subtitle">
+    A Pedersen commitment lets you commit to a value <code>v</code> with a random
+    blinding <code>r</code> such that:
+  </p>
+  <ul>
+    <li><strong>Hiding</strong>: the commitment reveals nothing about <code>v</code>.</li>
+    <li><strong>Binding</strong>: you cannot later open it to a different value.</li>
+    <li><strong>Homomorphic</strong>: <code>commit(a) · commit(b) = commit(a + b)</code>.</li>
+  </ul>
+
+  <div class="formula">
+    commit(v, r) = g<sup>v</sup> · h<sup>r</sup> mod p
+  </div>
+
+  <div class="demo">
+    <div class="inputs">
+      <label>v <input id="v" value="3" /></label>
+      <label>r <input id="r" value="5" /></label>
+      <label>g <input id="g" value="4" /></label>
+      <label>h <input id="h" value="9" /></label>
+      <label>p <input id="p" value="23" /></label>
+    </div>
+    <button id="run">Commit</button>
+    <div class="result">
+      <div class="label">Result</div>
+      <pre id="output">—</pre>
+    </div>
+  </div>
+
+  <h2>Try it</h2>
+  <ul class="hints">
+    <li>Same <code>(v, r)</code> always gives the same commitment — try clicking twice.</li>
+    <li>Change <code>r</code> while keeping <code>v</code> the same — commitment changes (hiding).</li>
+    <li>Change <code>v</code> while keeping <code>r</code> the same — commitment changes (binding).</li>
+  </ul>
+
+  <h2>What's happening</h2>
+  <p>
+    The button calls a Rust function compiled to WebAssembly. The same
+    <code>commit</code> function is used by the rollup server to lock account
+    state. Read <a href={`${base}/docs/ex1_preimage`}>Ex1</a> for the full math
+    and security argument.
+  </p>
+
+  <script type="module" define:vars={{ wasmBase: base }}>
+    const wasmModule = await import(`${wasmBase}/pkg/zkp.js`);
+    await wasmModule.default(`${wasmBase}/pkg/zkp_bg.wasm`);
+    const { pedersen_commit } = wasmModule;
+
+    const $ = id => document.getElementById(id);
+
+    $('run').addEventListener('click', () => {
+      const v = $('v').value;
+      const r = $('r').value;
+      const g = $('g').value;
+      const h = $('h').value;
+      const p = $('p').value;
+      try {
+        const result = pedersen_commit(v, r, g, h, p);
+        $('output').innerText = result;
+      } catch (e) {
+        $('output').innerText = `Error: ${e.message ?? e}`;
+      }
+    });
+  </script>
+
+  <style>
+    .back {
+      display: inline-block;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+      text-decoration: none;
+      color: var(--fg-muted);
+    }
+    .back:hover { color: var(--accent); }
+    .subtitle { color: var(--fg-muted); }
+    .formula {
+      background: var(--code-bg);
+      padding: 16px;
+      border-radius: 6px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 1.1rem;
+      text-align: center;
+      margin: 24px 0;
+    }
+    .demo {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      background: white;
+      margin: 24px 0;
+    }
+    .inputs {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .inputs label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+    }
+    .inputs input {
+      width: 80px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    button {
+      margin-top: 16px;
+      padding: 10px 20px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    button:hover { opacity: 0.92; }
+    .result {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .result .label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--fg-muted);
+      margin-bottom: 6px;
+    }
+    .result pre {
+      margin: 0;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+    .hints {
+      color: var(--fg-muted);
+    }
+  </style>
+</Layout>
