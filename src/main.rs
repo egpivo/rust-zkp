@@ -45,8 +45,10 @@ async fn submit_tx(
     let mut s = state.rollup.lock().await;
     match s.apply_tx(&tx) {
         Ok(()) => {
-            state.storage.save_account(&s.accounts[&tx.from]).unwrap();
-            state.storage.save_account(&s.accounts[&tx.to]).unwrap();
+            state.storage.save_accounts(&[
+                &s.accounts[&tx.from],
+                &s.accounts[&tx.to],
+            ]).unwrap();
             Ok("tx applied".to_string())
 
         }

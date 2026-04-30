@@ -18,6 +18,17 @@ impl Storage {
         Ok(())
     }
 
+    pub fn save_accounts(&self, accounts: &[&Account]) -> sled::Result<()> {
+        let mut batch = sled::Batch::default();
+        for account in accounts {
+            let key = format!("account:{}", account.id);
+            let value = bincode::serialize(account).unwrap();
+            batch.insert(key.as_bytes(), value);
+        }
+        self.db.apply_batch(batch)?;
+        Ok(())
+    }
+
     pub fn load_all_accounts(&self) -> sled::Result<Vec<Account>> {
         let prefix = "account:";
         let mut accounts = vec![];
