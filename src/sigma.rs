@@ -1,5 +1,6 @@
 use num_bigint::{BigUint, RandBigInt};
 use sha2::{Sha256, Digest};
+use serde::{Deserialize, Serialize};
 
 pub fn prove_commit(g: &BigUint, p: &BigUint) -> (BigUint, BigUint) {
     let mut rng = rand::thread_rng();
@@ -12,7 +13,7 @@ pub fn prove_response(k: &BigUint, e: &BigUint, secret: &BigUint) -> BigUint {
     k + e * secret
 }
 
-
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proof {
     pub r: BigUint, // randomly commit g^k mod p 
     pub z: BigUint, // response = k + e * secret

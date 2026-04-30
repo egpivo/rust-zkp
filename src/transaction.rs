@@ -1,6 +1,8 @@
 use num_bigint::BigUint;
 use crate::sigma::Proof;
+use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
     pub from: u32,
     pub to: u32,

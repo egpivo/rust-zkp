@@ -58,11 +58,17 @@ impl State {
         let mut ids: Vec<&u32> = self.accounts.keys().collect();
         ids.sort();
 
-        let leaves: Vec<BigUint> = ids.iter()
+        let mut leaves: Vec<BigUint> = ids.iter()
             .map(|id| self.accounts[id].hash())
             .collect();
+        
+        // Pad to next power of 2
+        let target = leaves.len().next_power_of_two();
+        while leaves.len() < target {
+           leaves.push(BigUint::from(0u32));
+        }
 
-        build_tree(leaves)
+         build_tree(leaves)
     }
 
 
