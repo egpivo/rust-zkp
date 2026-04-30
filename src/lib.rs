@@ -7,6 +7,7 @@ pub mod state;
 pub mod transaction;
 pub mod batch;
 pub mod error;
+pub mod storage;
 
 
 #[cfg(test)]

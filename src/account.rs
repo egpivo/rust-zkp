@@ -1,8 +1,8 @@
 use num_bigint::BigUint;
 use sha2::{Sha256, Digest};
+use serde::{Deserialize, Serialize};
 
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     pub id: u32,
     pub balance: u64,

@@ -22,3 +22,13 @@ target
 
 .local/
 .claude/
+
+# Sled database directory
+data/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
