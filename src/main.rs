@@ -10,6 +10,8 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, mpsc};
 use tokio::time::{Duration, interval};
 use tower_http::cors::{Any, CorsLayer};
+use tracing::{info, instrument, warn};
+use tracing_subscriber::EnvFilter;
 use zkp::account::Account;
 use zkp::dto::AccountSummary;
 use zkp::error::RollupError;
@@ -70,15 +72,19 @@ async fn list_accounts(State(state): State<AppState>) -> Json<Vec<AccountSummary
     Json(results)
 }
 
+#[instrument(
+    skip_all,
+    fields(from = tx.from, to = tx.to, amount = tx.amount, nonce = tx.nonce)
+)]
 async fn submit_tx(
     State(state): State<AppState>,
     Json(tx): Json<Transaction>,
 ) -> Result<(StatusCode, String), RollupError> {
-    state
-        .mempool_tx
-        .send(tx)
-        .await
-        .map_err(|_| RollupError::StateRootMismatch)?;
+    state.mempool_tx.send(tx).await.map_err(|_| {
+        warn!("mempool full");
+        RollupError::StateRootMismatch
+    })?;
+    info!("queued");
     Ok((StatusCode::ACCEPTED, "tx queued".to_string()))
 }
 
@@ -119,6 +125,12 @@ async fn get_account(
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .init();
+
     let data_path = std::env::var("DATA_DIR").unwrap_or_else(|_| "./data".to_string());
     let storage = Storage::open(&data_path).unwrap();
     let (mempool_tx, mempool_rx) = mpsc::channel::<Transaction>(1000);
@@ -184,7 +196,7 @@ async fn main() {
             }
             drop(s);
 
-            println!("[mempool] applied {applied}/{count} txs");
+            info!(applied, count, "batch applied");
         }
     });
 
@@ -212,6 +224,6 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
         .await
         .unwrap();
-    println!("Listening on http://0.0.0.0:{port}");
+    info!(port, "rollup server listening");
     axum::serve(listener, app).await.unwrap();
 }
