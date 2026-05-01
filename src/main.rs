@@ -107,7 +107,8 @@ async fn get_account(
 
 #[tokio::main]
 async fn main() {
-    let storage = Storage::open("./data").unwrap();
+    let data_path = std::env::var("DATA_DIR").unwrap_or_else(|_| "./data".to_string());
+    let storage = Storage::open(&data_path).unwrap();
 
     let p = BigUint::from(223u32);
     let g = BigUint::from(4u32);
@@ -151,7 +152,13 @@ async fn main() {
         .layer(cors)
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("Listening on http://0.0.0.0:3000");
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(3000);
+    let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
+        .await
+        .unwrap();
+    println!("Listening on http://0.0.0.0:{port}");
     axum::serve(listener, app).await.unwrap();
 }

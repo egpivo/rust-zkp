@@ -1,0 +1,13 @@
+target/
+data/
+pkg/
+web/
+docs/
+.local/
+.claude/
+.git/
+.github/
+node_modules/
+*.md
+Dockerfile
+.dockerignore
