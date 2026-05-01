@@ -7,7 +7,7 @@ use axum::{
 use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 use tokio::time::{Duration, interval};
 use tower_http::cors::{Any, CorsLayer};
 use zkp::account::Account;
@@ -16,7 +16,6 @@ use zkp::error::RollupError;
 use zkp::state::State as RollupState;
 use zkp::storage::Storage;
 use zkp::transaction::Transaction;
-
 
 #[derive(Clone)]
 struct AppState {
@@ -188,7 +187,6 @@ async fn main() {
             println!("[mempool] applied {applied}/{count} txs");
         }
     });
-
 
     let cors = CorsLayer::new()
         .allow_origin(Any)

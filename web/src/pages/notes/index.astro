@@ -35,15 +35,16 @@ const sections: DocSection[] = [
       { slug: "persistence", title: "Persistence with sled", desc: "KV database, recovery, atomicity" },
       { slug: "cors_explained", title: "CORS Explained", desc: "Why browsers block your API & how to fix it" },
       { slug: "deploy_render", title: "Deploy to Render", desc: "Free hosting via Docker, no credit card required" },
+      { slug: "mempool_and_spawn", title: "Mempool & Background Tasks", desc: "tokio::spawn, MPSC channels, async drain pattern" },
     ],
   },
 ];
 ---
 
-<Layout title="Docs">
-  <h1>Documentation</h1>
+<Layout title="Notes">
+  <h1>Learning Notes</h1>
   <p class="subtitle">
-    Standalone walkthroughs of every concept — math, intuition, where it breaks, and the Rust patterns used.
+    Personal walkthroughs of every concept — math, intuition, where it breaks, and the Rust patterns used.
   </p>
 
   {sections.map(section => (
@@ -52,7 +53,7 @@ const sections: DocSection[] = [
       <ul class="doc-list">
         {section.items.map(item => (
           <li>
-            <a href={`${base}/docs/${item.slug}`}>
+            <a href={`${base}/notes/${item.slug}`}>
               <strong>{item.title}</strong>
               <span>{item.desc}</span>
             </a>
