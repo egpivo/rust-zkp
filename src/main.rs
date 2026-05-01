@@ -112,16 +112,21 @@ async fn main() {
 
     let p = BigUint::from(223u32);
     let g = BigUint::from(4u32);
-    let pubkey = BigUint::from(99u32);
+
+    // Seed pubkey derived from a known secret so the playground demos
+    // can sign transactions for the seeded accounts without prior registration.
+    // DEMO ONLY: in real systems each account has its own secret.
+    let demo_secret = BigUint::from(12345u32);
+    let demo_pubkey = g.modpow(&demo_secret, &p);
 
     let mut rollup_state = RollupState::new(p, g);
 
     if storage.load_all_accounts().unwrap().is_empty() {
         let init_accounts = [
-            Account::new(1, 100, pubkey.clone()),
-            Account::new(2, 50, pubkey.clone()),
-            Account::new(3, 200, pubkey.clone()),
-            Account::new(4, 0, pubkey.clone()),
+            Account::new(1, 100, demo_pubkey.clone()),
+            Account::new(2, 50, demo_pubkey.clone()),
+            Account::new(3, 200, demo_pubkey.clone()),
+            Account::new(4, 0, demo_pubkey.clone()),
         ];
         for a in &init_accounts {
             storage.save_account(a).unwrap();
