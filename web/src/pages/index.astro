@@ -8,49 +8,63 @@ const base = import.meta.env.BASE_URL;
   <section class="hero">
     <h1>rust-zkp</h1>
     <p class="lead">
-      A learning project that builds a minimal ZK-Rollup from scratch in Rust —
-      no SNARK frameworks, just the cryptographic primitives composed by hand.
+      A minimal ZK-Rollup hand-built in Rust — cryptographic primitives, mini state machine, and an HTTP backend. No SNARK frameworks; every layer composed from scratch.
     </p>
     <div class="cta">
-      <a href={`${base}/notes/`} class="btn primary">Read the notes</a>
-      <a href={`${base}/demos/`} class="btn">Try the playground</a>
+      <a href={`${base}/demos/`} class="btn primary">Try the playground</a>
+      <a href={`${base}/notes/`} class="btn">Read the notes</a>
+      <a href="https://github.com/egpivo/rust-zkp" class="btn" target="_blank" rel="noopener">View on GitHub</a>
     </div>
   </section>
 
   <section class="features">
-    <h2>What's inside</h2>
+    <h2>What this demonstrates</h2>
     <div class="grid">
       <div class="card">
-        <h3>ZKP primitives</h3>
-        <p>Pedersen commitment, Sigma protocol, Fiat-Shamir, Merkle membership, range proofs.</p>
+        <h3>ZKP primitives from scratch</h3>
+        <p>Pedersen commitments, Sigma protocols, Fiat-Shamir transforms, Merkle membership, range proofs via bit decomposition.</p>
       </div>
       <div class="card">
         <h3>Mini rollup</h3>
-        <p>Account state, signed transactions with replay protection, atomic batch processing.</p>
+        <p>Account state, signed transactions with replay protection, atomic batch processing, sled-backed persistence with atomic writes.</p>
       </div>
       <div class="card">
-        <h3>Backend stack</h3>
-        <p>HTTP API server (axum), CLI client (clap), persistent storage (sled), CI/CD.</p>
+        <h3>Production-style Rust backend</h3>
+        <p>axum HTTP server, MPSC mempool, background batch builder, structured logging via tracing, custom error responses, CORS, full CI/CD.</p>
       </div>
       <div class="card">
-        <h3>WASM playground</h3>
-        <p>Try the cryptographic primitives in your browser — running real Rust code via WebAssembly.</p>
+        <h3>Browser-side cryptography</h3>
+        <p>Same Rust crypto compiled to WebAssembly. Sign a transaction in the browser, post to the deployed API, watch it get batched and applied.</p>
       </div>
     </div>
+  </section>
+
+  <section class="stack">
+    <h2>Stack</h2>
+    <p>
+      <code>num-bigint</code>, <code>sha2</code> ·
+      <code>axum</code>, <code>tokio</code>, <code>tower-http</code> ·
+      <code>tracing</code> ·
+      <code>sled</code>, <code>bincode</code> ·
+      <code>clap</code>, <code>reqwest</code> ·
+      <code>wasm-bindgen</code>, <code>wasm-pack</code> ·
+      <code>rayon</code> ·
+      Astro 4 ·
+      Docker · Render · GitHub Pages · GitHub Actions
+    </p>
   </section>
 
   <section class="features">
     <h2>Approach</h2>
     <p>
-      Most ZKP tutorials either show toy code or jump straight to SNARK frameworks.
-      This project deliberately sits in the middle: build every primitive yourself,
-      compose them into a working system, and understand why each piece exists.
+      Most ZKP tutorials show toy code or jump straight to SNARK frameworks.
+      This project sits in the middle: build every primitive yourself, compose them into a working system, and understand why each piece exists.
     </p>
     <p>
-      The cryptography is intentionally simplified (small primes instead of elliptic curves,
-      direct verification instead of SNARKs) to keep the focus on architecture and
-      protocol design. See <a href={`${base}/notes/mini_rollup`}>this note</a> for what's
-      production-grade and what's not.
+      The cryptography is intentionally simplified — small primes instead of elliptic curves, direct verification instead of SNARKs — to keep the focus on architecture and protocol design. The full picture of what's production-grade and what's not is in <a href={`${base}/notes/mini_rollup`}>this note</a>.
+    </p>
+    <p>
+      Built end-to-end as a learning project: ZKP exercises → rollup composition → backend → WASM playground → deployment. Notes for each layer are in the <a href={`${base}/notes/`}>Notes</a> section.
     </p>
   </section>
 
@@ -66,12 +80,13 @@ const base = import.meta.env.BASE_URL;
     .lead {
       font-size: 1.15rem;
       color: var(--fg-muted);
-      max-width: 640px;
+      max-width: 680px;
     }
     .cta {
       margin-top: 24px;
       display: flex;
       gap: 12px;
+      flex-wrap: wrap;
     }
     .btn {
       display: inline-block;
@@ -90,12 +105,20 @@ const base = import.meta.env.BASE_URL;
       border-color: var(--accent);
     }
     .btn.primary:hover { color: white; opacity: 0.9; }
-    .features {
+    .features, .stack {
       margin-top: 48px;
+    }
+    .stack p {
+      color: var(--fg-muted);
+      font-size: 0.95rem;
+      line-height: 1.9;
+    }
+    .stack code {
+      font-size: 0.85em;
     }
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 16px;
       margin-top: 16px;
     }
