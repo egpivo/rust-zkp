@@ -1,0 +1,87 @@
+---
+import Layout from '../../layouts/Layout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Transaction Builder">
+  <a href={`${base}/demos/`} class="back">← Playground</a>
+  <h1>Transaction Builder</h1>
+  <p>
+    Sign a transaction in your browser using WebAssembly, then submit it to your
+    local rollup server. The secret never leaves your browser.
+  </p>
+
+  <div class="demo">
+    <label>Server URL: <input id="server" value="http://localhost:3000"></label>
+    <hr>
+    <label>From: <input id="from" type="number" value="100"></label>
+    <label>To: <input id="to" type="number" value="200"></label>
+    <label>Amount: <input id="amount" type="number" value="30"></label>
+    <label>Nonce: <input id="nonce" type="number" value="1"></label>
+    <label>Secret: <input id="secret" value="12345"></label>
+    <button id="submit">Sign & Submit</button>
+  </div>
+
+  <div class="result">
+    <div class="label">Status</div>
+    <pre id="status">—</pre>
+  </div>
+
+  <script type="module" define:vars={{ wasmBase: base }}>
+    const wasmModule = await import(`${wasmBase}/pkg/zkp.js`);
+    await wasmModule.default(`${wasmBase}/pkg/zkp_bg.wasm`);
+    const { sign_transaction } = wasmModule;
+
+    const $ = id => document.getElementById(id);
+
+    $('submit').addEventListener('click', async () => {
+      $('status').className = '';
+      $('status').innerText = 'Working...';
+      const server = $('server').value;
+      try {
+        // 1. Fetch params
+        const paramsResp = await fetch(server + '/params');
+        if (!paramsResp.ok) throw new Error(`/params HTTP ${paramsResp.status}`);
+        const params = await paramsResp.json();
+        const p = params.p.toString();
+        const g = params.g.toString();
+        // BigUint comes as array of u32 limbs — for small numbers, [0] is enough
+        // For our toy params (p=223, g=4), this works.
+
+        // 2. Sign in browser
+        const from = parseInt($('from').value);
+        const to = parseInt($('to').value);
+        const amount = BigInt($('amount').value);
+        const nonce = BigInt($('nonce').value);
+        const secret = $('secret').value;
+
+        const txJson = sign_transaction(from, to, amount, nonce, secret, p, g);
+
+        // 3. POST to /tx
+        const resp = await fetch(server + '/tx', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: txJson,
+        });
+        const text = await resp.text();
+        $('status').className = resp.ok ? 'ok' : 'err';
+        $('status').innerText = `${resp.status} ${resp.statusText}\n${text}`;
+      } catch (e) {
+        $('status').className = 'err';
+        $('status').innerText = `Error: ${e.message ?? e}`;
+      }
+    });
+  </script>
+  <style>
+    #status.ok {
+      color: #2a7a2a;
+      border-left: 3px solid #2a7a2a;
+      padding-left: 10px;
+    }
+    #status.err {
+      color: #c33;
+      border-left: 3px solid #c33;
+      padding-left: 10px;
+    }
+  </style>
+</Layout>
