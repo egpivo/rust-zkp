@@ -1,12 +1,14 @@
 use axum::{
     Json, Router,
     extract::{Path, State},
+    http::StatusCode,
     routing::{get, post},
 };
 use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, Mutex};
+use tokio::time::{Duration, interval};
 use tower_http::cors::{Any, CorsLayer};
 use zkp::account::Account;
 use zkp::dto::AccountSummary;
@@ -15,10 +17,12 @@ use zkp::state::State as RollupState;
 use zkp::storage::Storage;
 use zkp::transaction::Transaction;
 
+
 #[derive(Clone)]
 struct AppState {
     rollup: Arc<Mutex<RollupState>>,
     storage: Arc<Storage>,
+    mempool_tx: mpsc::Sender<Transaction>,
 }
 
 #[derive(Serialize)]
@@ -70,14 +74,23 @@ async fn list_accounts(State(state): State<AppState>) -> Json<Vec<AccountSummary
 async fn submit_tx(
     State(state): State<AppState>,
     Json(tx): Json<Transaction>,
-) -> Result<String, RollupError> {
-    let mut s = state.rollup.lock().await;
-    s.apply_tx(&tx)?;
+) -> Result<(StatusCode, String), RollupError> {
     state
-        .storage
-        .save_accounts(&[&s.accounts[&tx.from], &s.accounts[&tx.to]])
-        .unwrap();
-    Ok("tx applied".to_string())
+        .mempool_tx
+        .send(tx)
+        .await
+        .map_err(|_| RollupError::StateRootMismatch)?;
+    Ok((StatusCode::ACCEPTED, "tx queued".to_string()))
+}
+
+async fn get_mempool(State(state): State<AppState>) -> Json<serde_json::Value> {
+    let capacity = state.mempool_tx.capacity();
+    let max = state.mempool_tx.max_capacity();
+    Json(serde_json::json!({
+        "available_slots": capacity,
+        "max_capacity": max,
+        "pending": max - capacity,
+    }))
 }
 
 async fn health() -> &'static str {
@@ -109,6 +122,7 @@ async fn get_account(
 async fn main() {
     let data_path = std::env::var("DATA_DIR").unwrap_or_else(|_| "./data".to_string());
     let storage = Storage::open(&data_path).unwrap();
+    let (mempool_tx, mempool_rx) = mpsc::channel::<Transaction>(1000);
 
     let p = BigUint::from(223u32);
     let g = BigUint::from(4u32);
@@ -139,7 +153,42 @@ async fn main() {
     let app_state = AppState {
         rollup: Arc::new(Mutex::new(rollup_state)),
         storage: Arc::new(storage),
+        mempool_tx,
     };
+    let bg_state = app_state.clone();
+    let mut bg_rx = mempool_rx;
+    tokio::spawn(async move {
+        let mut tick = interval(Duration::from_secs(5));
+        loop {
+            tick.tick().await;
+
+            // Drain non-blocking
+            let mut txs = Vec::new();
+            while let Ok(tx) = bg_rx.try_recv() {
+                txs.push(tx);
+            }
+
+            if txs.is_empty() {
+                continue;
+            }
+
+            let count = txs.len();
+            let mut applied = 0;
+            let mut s = bg_state.rollup.lock().await;
+            for tx in &txs {
+                if s.apply_tx(tx).is_ok() {
+                    let from = s.accounts[&tx.from].clone();
+                    let to = s.accounts[&tx.to].clone();
+                    bg_state.storage.save_accounts(&[&from, &to]).ok();
+                    applied += 1;
+                }
+            }
+            drop(s);
+
+            println!("[mempool] applied {applied}/{count} txs");
+        }
+    });
+
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -154,6 +203,7 @@ async fn main() {
         .route("/tx", post(submit_tx))
         .route("/accounts", get(list_accounts).post(create_account))
         .route("/params", get(get_params))
+        .route("/mempool", get(get_mempool))
         .layer(cors)
         .with_state(app_state);
 
