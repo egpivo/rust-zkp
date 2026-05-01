@@ -3,6 +3,7 @@ use num_bigint::BigUint;
 use serde_json::json;
 use zkp::sigma::{prove_commit, prove_response, challenge_for_tx, Proof};
 use zkp::transaction::Transaction;
+use zkp::dto::AccountSummary;
 
 
 #[derive(Parser)]
@@ -73,9 +74,9 @@ async fn main() {
             println!("{}", resp);
         }
         Command::Balance { id } => {
-            let url = format!("{}/balance/{}", cli.server, id);
-            let resp = reqwest::get(&url).await.unwrap().text().await.unwrap();
-            println!("{}", resp);
+            let url = format!("{}/accounts/{}", cli.server, id);
+            let resp: AccountSummary = reqwest::get(&url).await.unwrap().json().await.unwrap();
+            println!("{}", resp.balance);
         }
 
         Command::Register { id, balance, secret } => {

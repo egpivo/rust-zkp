@@ -5,6 +5,7 @@ pub mod merkle;
 pub mod account;
 pub mod transaction;
 pub mod batch;
+pub mod dto;
 
 #[cfg(feature = "server")]
 pub mod state;
@@ -15,6 +16,8 @@ pub mod error;
 
 #[cfg(feature = "wasm")]
 pub mod wasm;
+
+
 
 
 #[cfg(test)]

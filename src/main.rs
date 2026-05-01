@@ -13,7 +13,7 @@ use zkp::state::State as RollupState;
 use zkp::transaction::Transaction;
 use zkp::storage::Storage;
 use zkp::error::RollupError;
-
+use zkp::dto::AccountSummary;
 
 #[derive(Clone)]
 struct AppState {
@@ -52,6 +52,19 @@ async fn create_account(
     format!("account {} created", req.id)
 }
 
+async fn list_accounts(State(state): State<AppState>,) -> Json<Vec<AccountSummary>> {
+    let s = state.rollup.lock().await;
+    let mut results: Vec<AccountSummary> = s.accounts.values()
+        .map(|a| AccountSummary {
+            id: a.id,
+            balance: a.balance,
+            nonce: a.nonce,
+        })
+        .collect();
+    results.sort_by_key(|a| a.id);
+    Json(results)  
+}
+
 async fn submit_tx(
     State(state): State<AppState>,
     Json(tx): Json<Transaction>,
@@ -76,15 +89,18 @@ async fn get_state_root(State(state): State<AppState>) -> String {
 }
 
 
-async fn get_balance(
+async fn get_account(
     Path(id): Path<u32>,
     State(state): State<AppState>,
-) -> String {
+) -> Result<Json<AccountSummary>, RollupError> {
     let s = state.rollup.lock().await;
-    match s.accounts.get(&id) {
-        Some(a) => a.balance.to_string(),
-        None => "account not found".to_string(),
-    }
+    let account = s.accounts.get(&id)
+        .ok_or(RollupError::AccountNotFound { id })?;
+    Ok(Json(AccountSummary {
+        id: account.id,
+        balance: account.balance,
+        nonce: account.nonce,
+    }))
 }
 
 
@@ -122,9 +138,9 @@ async fn main() {
         .route("/", get(|| async { "rollup api" }))
         .route("/health", get(health))
         .route("/state-root", get(get_state_root))
-        .route("/balance/{id}", get(get_balance))
+        .route("/accounts/{id}", get(get_account))
         .route("/tx", post(submit_tx))
-        .route("/accounts", post(create_account))
+        .route("/accounts", get(list_accounts).post(create_account))
         .route("/params", get(get_params))
         .with_state(app_state);
     

@@ -17,4 +17,3 @@ pub fn pedersen_commit(v: &str, r: &str, g: &str, h: &str, p: &str) -> String {
     let p = BigUint::parse_bytes(p.as_bytes(), 10).unwrap();
     commit(&v, &r, &g, &h, &p).to_string()
 }
-
