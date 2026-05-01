@@ -1,0 +1,198 @@
+---
+import Layout from '../../layouts/Layout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Merkle Membership">
+  <a href={`${base}/demos/`} class="back">← Playground</a>
+  <h1>Merkle Membership</h1>
+  <p class="subtitle">
+    Prove an element is in a set of leaves, given only the Merkle root.
+    The proof has size <code>O(log n)</code>: for 1000 leaves, just 10 sibling hashes.
+  </p>
+
+  <section class="card">
+    <h2>Leaves</h2>
+    <p>Comma-separated list of values. Padded to next power of 2 with zeros.</p>
+    <input id="leaves" value="3,4,5,6" class="wide">
+    <button id="compute-root">Compute Root</button>
+    <div class="result-row"><span class="label">Merkle root</span><code id="root">—</code></div>
+  </section>
+
+  <section class="card">
+    <h2>Generate Proof</h2>
+    <div class="grid">
+      <label>Leaf index <input id="index" type="number" min="0" value="2"></label>
+    </div>
+    <button id="prove">Generate Proof</button>
+    <div class="result-row"><span class="label">Leaf value</span><code id="leaf">—</code></div>
+    <div class="result-row"><span class="label">Sibling path</span><code id="path">—</code></div>
+  </section>
+
+  <section class="card">
+    <h2>Verify (Step-by-step)</h2>
+    <p>Given <code>(leaf, index, path, root)</code>, recompute up the tree.</p>
+    <button id="verify">Verify</button>
+    <div id="steps"></div>
+    <div id="verdict" class="verdict">—</div>
+  </section>
+
+  <script type="module" define:vars={{ wasmBase: base }}>
+    const m = await import(`${wasmBase}/pkg/zkp.js`);
+    await m.default(`${wasmBase}/pkg/zkp_bg.wasm`);
+
+    const $ = id => document.getElementById(id);
+    const state = { root: null, leaf: null, index: null, path: null };
+
+    $('compute-root').addEventListener('click', () => {
+      const csv = $('leaves').value;
+      try {
+        state.root = m.merkle_root(csv);
+        $('root').innerText = state.root;
+      } catch (e) {
+        $('root').innerText = `Error: ${e.message ?? e}`;
+      }
+    });
+
+    $('prove').addEventListener('click', () => {
+      const csv = $('leaves').value;
+      const idx = parseInt($('index').value);
+      try {
+        const data = JSON.parse(m.merkle_path(csv, idx));
+        state.leaf = data.leaf;
+        state.index = data.index;
+        state.path = data.path;
+        state.root = data.root;
+        $('leaf').innerText = data.leaf;
+        $('path').innerText = data.path.length === 0
+          ? '(empty — only one leaf)'
+          : data.path.join(', ');
+        $('root').innerText = data.root;
+      } catch (e) {
+        $('leaf').innerText = `Error: ${e.message ?? e}`;
+      }
+    });
+
+    $('verify').addEventListener('click', () => {
+      if (!state.path || !state.root) {
+        alert('Generate a proof first');
+        return;
+      }
+      const pathCsv = state.path.join(',');
+      const result = JSON.parse(
+        m.merkle_verify_explain(state.leaf, state.index, pathCsv, state.root)
+      );
+
+      const stepsDiv = $('steps');
+      stepsDiv.innerHTML = '';
+      result.steps.forEach((s, i) => {
+        const row = document.createElement('div');
+        row.className = 'step';
+        row.innerHTML = `
+          <div class="step-num">Level ${i + 1}</div>
+          <div class="step-body">
+            <div>hash(<code>${s.left}</code>, <code>${s.right}</code>)</div>
+            <div>= <code>${s.out}</code></div>
+          </div>`;
+        stepsDiv.appendChild(row);
+      });
+
+      $('verdict').innerText = result.valid
+        ? `VALID ✓ — computed root matches`
+        : `INVALID ✗ — got ${result.computed_root}`;
+      $('verdict').className = `verdict ${result.valid ? 'ok' : 'err'}`;
+    });
+  </script>
+
+  <style>
+    .subtitle { color: var(--fg-muted); }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      background: white;
+      margin: 16px 0;
+    }
+    .card h2 { margin-top: 0; font-size: 1.1rem; }
+    .card p { color: var(--fg-muted); margin: 8px 0 12px; }
+    .wide {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      box-sizing: border-box;
+      margin-bottom: 8px;
+    }
+    .grid { display: flex; gap: 16px; flex-wrap: wrap; }
+    .grid label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+      gap: 4px;
+    }
+    .grid input {
+      width: 100px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    button {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+    button:hover { opacity: 0.9; }
+    .result-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 0.9rem;
+    }
+    .result-row .label {
+      min-width: 130px;
+      color: var(--fg-muted);
+    }
+    .result-row code {
+      flex: 1;
+      word-break: break-all;
+    }
+    #steps {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .step {
+      display: flex;
+      gap: 12px;
+      padding: 10px 12px;
+      background: var(--code-bg);
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .step-num {
+      font-weight: 600;
+      min-width: 70px;
+      color: var(--fg-muted);
+    }
+    .step-body code {
+      word-break: break-all;
+    }
+    .verdict {
+      margin-top: 12px;
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+    .verdict.ok { color: #2a7a2a; }
+    .verdict.err { color: #c33; }
+  </style>
+</Layout>

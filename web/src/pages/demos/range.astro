@@ -1,0 +1,184 @@
+---
+import Layout from '../../layouts/Layout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Range Proof">
+  <a href={`${base}/demos/`} class="back">← Playground</a>
+  <h1>Range Proof (Bit Decomposition)</h1>
+  <p class="subtitle">
+    Prove <code>v ≥ T</code> by showing <code>delta = v - T</code> is non-negative.
+    A non-negative value can be written as a sum of bits, each 0 or 1.
+    The full ZK version commits to each bit; here we visualize the decomposition.
+  </p>
+
+  <section class="card">
+    <h2>Inputs</h2>
+    <div class="grid">
+      <label>v (your value) <input id="v" type="number" value="42"></label>
+      <label>T (threshold) <input id="t" type="number" value="10"></label>
+      <label>num_bits <input id="num-bits" type="number" value="8" min="1" max="32"></label>
+    </div>
+    <button id="run">Decompose</button>
+  </section>
+
+  <section class="card">
+    <h2>Decomposition</h2>
+    <div class="result-row">
+      <span class="label">delta = v − T</span>
+      <code id="delta">—</code>
+    </div>
+    <div class="result-row">
+      <span class="label">bits (LSB first)</span>
+      <code id="bits-list">—</code>
+    </div>
+    <div id="bit-grid" class="bit-grid"></div>
+    <div class="result-row">
+      <span class="label">Σ b<sub>i</sub> · 2<sup>i</sup></span>
+      <code id="reconstructed">—</code>
+    </div>
+    <div id="verdict" class="verdict">—</div>
+  </section>
+
+  <section class="card hint">
+    <h3>Why this proves v ≥ T</h3>
+    <p>
+      <code>BigUint</code> arithmetic refuses to compute <code>v - T</code> when <code>v &lt; T</code>
+      (would underflow). So <em>just being able to produce delta and its bit decomposition</em>
+      is the proof. In a true ZK protocol, the prover commits to each bit, and the
+      verifier checks the homomorphic recombination without ever seeing the bits.
+    </p>
+  </section>
+
+  <script type="module" define:vars={{ wasmBase: base }}>
+    const m = await import(`${wasmBase}/pkg/zkp.js`);
+    await m.default(`${wasmBase}/pkg/zkp_bg.wasm`);
+
+    const $ = id => document.getElementById(id);
+
+    $('run').addEventListener('click', () => {
+      const v = $('v').value;
+      const t = $('t').value;
+      const numBits = parseInt($('num-bits').value);
+
+      const data = JSON.parse(m.range_decompose(v, t, numBits));
+
+      if (data.error) {
+        $('delta').innerText = `Error: ${data.error}`;
+        $('bits-list').innerText = '—';
+        $('bit-grid').innerHTML = '';
+        $('reconstructed').innerText = '—';
+        $('verdict').innerText = 'INVALID ✗ — v < T';
+        $('verdict').className = 'verdict err';
+        return;
+      }
+
+      $('delta').innerText = data.delta;
+      $('bits-list').innerText = `[${data.bits.join(', ')}]`;
+      $('reconstructed').innerText = data.reconstructed;
+
+      const grid = $('bit-grid');
+      grid.innerHTML = '';
+      data.bits.forEach((b, i) => {
+        const cell = document.createElement('div');
+        cell.className = `bit ${b === '1' ? 'on' : 'off'}`;
+        cell.innerHTML = `
+          <div class="bit-value">${b}</div>
+          <div class="bit-weight">2<sup>${i}</sup></div>
+        `;
+        grid.appendChild(cell);
+      });
+
+      const valid = data.delta === data.reconstructed;
+      $('verdict').innerText = valid ? 'VALID ✓ — bits reconstruct delta' : 'MISMATCH';
+      $('verdict').className = `verdict ${valid ? 'ok' : 'err'}`;
+    });
+
+    $('run').click();
+  </script>
+
+  <style>
+    .subtitle { color: var(--fg-muted); }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      background: white;
+      margin: 16px 0;
+    }
+    .card.hint {
+      background: #f5faff;
+    }
+    .card h2 { margin-top: 0; font-size: 1.1rem; }
+    .card h3 { margin-top: 0; font-size: 1rem; }
+    .card p { color: var(--fg-muted); margin: 8px 0 12px; }
+    .grid {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .grid label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+      gap: 4px;
+    }
+    .grid input {
+      width: 100px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    button {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin-top: 12px;
+    }
+    button:hover { opacity: 0.9; }
+    .result-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 0.9rem;
+    }
+    .result-row .label {
+      min-width: 160px;
+      color: var(--fg-muted);
+    }
+    .bit-grid {
+      display: flex;
+      gap: 6px;
+      margin: 12px 0;
+      flex-wrap: wrap;
+    }
+    .bit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 56px;
+      padding: 8px 0;
+      border-radius: 6px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 0.85rem;
+    }
+    .bit.on  { background: #2a7a2a; color: white; }
+    .bit.off { background: var(--code-bg); color: var(--fg-muted); }
+    .bit-value { font-size: 1.2rem; font-weight: 600; }
+    .bit-weight { font-size: 0.75rem; opacity: 0.85; }
+    .verdict {
+      margin-top: 12px;
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+    .verdict.ok { color: #2a7a2a; }
+    .verdict.err { color: #c33; }
+  </style>
+</Layout>

@@ -1,0 +1,207 @@
+---
+import Layout from '../../layouts/Layout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Sigma Protocol">
+  <a href={`${base}/demos/`} class="back">← Playground</a>
+  <h1>Sigma Protocol</h1>
+  <p class="subtitle">
+    Walk through a 3-move Schnorr proof: commit → challenge → response → verify.
+    The prover convinces the verifier they know <code>secret</code> such that
+    <code>c = g<sup>secret</sup> mod p</code>, without revealing it.
+  </p>
+
+  <section class="card">
+    <h2>0. Setup</h2>
+    <div class="grid">
+      <label>secret <input id="secret" value="123"></label>
+      <label>g <input id="g" value="4"></label>
+      <label>p <input id="p" value="223"></label>
+    </div>
+    <div class="result-row">
+      <span class="label">Public key c = g<sup>secret</sup> mod p</span>
+      <code id="pubkey">—</code>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>1. Prover commits</h2>
+    <p>Prover picks random <code>k</code>, sends <code>r = g<sup>k</sup> mod p</code>.</p>
+    <button id="step1">Generate (k, r)</button>
+    <div class="result-row"><span class="label">k (private)</span><code id="k">—</code></div>
+    <div class="result-row"><span class="label">r (sent)</span><code id="r">—</code></div>
+  </section>
+
+  <section class="card">
+    <h2>2. Verifier challenges</h2>
+    <p>Verifier picks random <code>e</code> in <code>[0, p)</code>.</p>
+    <button id="step2">Generate e</button>
+    <div class="result-row"><span class="label">e (sent)</span><code id="e">—</code></div>
+  </section>
+
+  <section class="card">
+    <h2>3. Prover responds</h2>
+    <p>Prover sends <code>z = k + e · secret</code>.</p>
+    <button id="step3">Compute z</button>
+    <div class="result-row"><span class="label">z (sent)</span><code id="z">—</code></div>
+  </section>
+
+  <section class="card">
+    <h2>4. Verifier checks</h2>
+    <p>Equation: <code>g<sup>z</sup> mod p == r · c<sup>e</sup> mod p</code></p>
+    <button id="step4">Verify</button>
+    <div class="result-row"><span class="label">LHS = g<sup>z</sup> mod p</span><code id="lhs">—</code></div>
+    <div class="result-row"><span class="label">RHS = r · c<sup>e</sup> mod p</span><code id="rhs">—</code></div>
+    <div id="verdict" class="verdict">—</div>
+  </section>
+
+  <button id="reset" class="reset">Reset</button>
+
+  <script type="module" define:vars={{ wasmBase: base }}>
+    const m = await import(`${wasmBase}/pkg/zkp.js`);
+    await m.default(`${wasmBase}/pkg/zkp_bg.wasm`);
+
+    const $ = id => document.getElementById(id);
+    const state = { k: null, r: null, e: null, z: null, c: null };
+
+    function readInputs() {
+      return {
+        secret: $('secret').value,
+        g: $('g').value,
+        p: $('p').value,
+      };
+    }
+
+    function refreshPubkey() {
+      try {
+        const { secret, g, p } = readInputs();
+        state.c = m.sigma_pubkey(secret, g, p);
+        $('pubkey').innerText = state.c;
+      } catch (e) {
+        $('pubkey').innerText = `Error: ${e.message ?? e}`;
+      }
+    }
+
+    ['secret', 'g', 'p'].forEach(id => $(id).addEventListener('input', refreshPubkey));
+    refreshPubkey();
+
+    $('step1').addEventListener('click', () => {
+      const { secret, g, p } = readInputs();
+      const data = JSON.parse(m.sigma_commit(secret, g, p));
+      state.k = data.k;
+      state.r = data.r;
+      state.c = data.pubkey;
+      $('k').innerText = data.k;
+      $('r').innerText = data.r;
+      $('pubkey').innerText = data.pubkey;
+    });
+
+    $('step2').addEventListener('click', () => {
+      const { p } = readInputs();
+      state.e = m.sigma_random_challenge(p);
+      $('e').innerText = state.e;
+    });
+
+    $('step3').addEventListener('click', () => {
+      const { secret } = readInputs();
+      if (!state.k || !state.e) {
+        alert('Run step 1 and 2 first');
+        return;
+      }
+      state.z = m.sigma_response(state.k, state.e, secret);
+      $('z').innerText = state.z;
+    });
+
+    $('step4').addEventListener('click', () => {
+      const { g, p } = readInputs();
+      if (!state.r || !state.z || !state.e || !state.c) {
+        alert('Run all previous steps first');
+        return;
+      }
+      const result = JSON.parse(
+        m.sigma_verify_explain(state.r, state.z, state.e, state.c, g, p)
+      );
+      $('lhs').innerText = result.lhs;
+      $('rhs').innerText = result.rhs;
+      $('verdict').innerText = result.valid ? 'VALID ✓' : 'INVALID ✗';
+      $('verdict').className = `verdict ${result.valid ? 'ok' : 'err'}`;
+    });
+
+    $('reset').addEventListener('click', () => {
+      state.k = state.r = state.e = state.z = null;
+      ['k', 'r', 'e', 'z', 'lhs', 'rhs'].forEach(id => $(id).innerText = '—');
+      $('verdict').innerText = '—';
+      $('verdict').className = 'verdict';
+      refreshPubkey();
+    });
+  </script>
+
+  <style>
+    .subtitle { color: var(--fg-muted); }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      background: white;
+      margin: 16px 0;
+    }
+    .card h2 { margin-top: 0; font-size: 1.1rem; }
+    .card p { color: var(--fg-muted); margin: 8px 0 12px; }
+    .grid {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .grid label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+      gap: 4px;
+    }
+    .grid input {
+      width: 100px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    button {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button:hover { opacity: 0.9; }
+    .reset {
+      background: var(--fg-muted);
+      margin-top: 8px;
+    }
+    .result-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 0.9rem;
+    }
+    .result-row .label {
+      min-width: 180px;
+      color: var(--fg-muted);
+    }
+    .result-row code {
+      flex: 1;
+      word-break: break-all;
+    }
+    .verdict {
+      margin-top: 12px;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    .verdict.ok { color: #2a7a2a; }
+    .verdict.err { color: #c33; }
+  </style>
+</Layout>
