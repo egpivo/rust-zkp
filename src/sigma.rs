@@ -1,6 +1,6 @@
 use num_bigint::{BigUint, RandBigInt};
-use sha2::{Sha256, Digest};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 pub fn prove_commit(g: &BigUint, p: &BigUint) -> (BigUint, BigUint) {
     let mut rng = rand::thread_rng();
@@ -15,10 +15,9 @@ pub fn prove_response(k: &BigUint, e: &BigUint, secret: &BigUint) -> BigUint {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proof {
-    pub r: BigUint, // randomly commit g^k mod p 
+    pub r: BigUint, // randomly commit g^k mod p
     pub z: BigUint, // response = k + e * secret
 }
-
 
 impl Proof {
     pub fn verify(proof: &Proof, c: &BigUint, e: &BigUint, g: &BigUint, p: &BigUint) -> bool {
@@ -37,19 +36,18 @@ pub fn challenge(g: &BigUint, c: &BigUint, r: &BigUint, p: &BigUint) -> BigUint 
 
 pub fn challenge_for_tx(
     g: &BigUint,
-    pubkey: &BigUint, 
-    r: &BigUint, 
-    p: &BigUint, 
-    message: &[u8]
+    pubkey: &BigUint,
+    r: &BigUint,
+    p: &BigUint,
+    message: &[u8],
 ) -> BigUint {
     let mut hasher = Sha256::new();
     hasher.update(g.to_bytes_be());
     hasher.update(pubkey.to_bytes_be());
-    hasher.update(r.to_bytes_be());    
+    hasher.update(r.to_bytes_be());
     hasher.update(message);
     BigUint::from_bytes_be(&hasher.finalize()) % p
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -70,7 +68,7 @@ mod tests {
         // Step 3: prover computes response
         let z = prove_response(&k, &e, &secret);
         // Step 4: verification
-        let proof = Proof {r, z};
+        let proof = Proof { r, z };
         assert!(Proof::verify(&proof, &c, &e, &g, &p));
     }
 }

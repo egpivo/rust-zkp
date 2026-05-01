@@ -1,19 +1,18 @@
 use axum::{
-    extract::{Path, State},    
+    Json, Router,
+    extract::{Path, State},
     routing::{get, post},
-    Router,
-    Json,
 };
 use num_bigint::BigUint;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use serde::{Deserialize, Serialize};
 use zkp::account::Account;
-use zkp::state::State as RollupState;
-use zkp::transaction::Transaction;
-use zkp::storage::Storage;
-use zkp::error::RollupError;
 use zkp::dto::AccountSummary;
+use zkp::error::RollupError;
+use zkp::state::State as RollupState;
+use zkp::storage::Storage;
+use zkp::transaction::Transaction;
 
 #[derive(Clone)]
 struct AppState {
@@ -32,7 +31,7 @@ async fn get_params(State(state): State<AppState>) -> Json<ParamsResponse> {
     Json(ParamsResponse {
         p: s.p.clone(),
         g: s.g.clone(),
-    })    
+    })
 }
 
 #[derive(Debug, Deserialize)]
@@ -52,9 +51,11 @@ async fn create_account(
     format!("account {} created", req.id)
 }
 
-async fn list_accounts(State(state): State<AppState>,) -> Json<Vec<AccountSummary>> {
+async fn list_accounts(State(state): State<AppState>) -> Json<Vec<AccountSummary>> {
     let s = state.rollup.lock().await;
-    let mut results: Vec<AccountSummary> = s.accounts.values()
+    let mut results: Vec<AccountSummary> = s
+        .accounts
+        .values()
         .map(|a| AccountSummary {
             id: a.id,
             balance: a.balance,
@@ -62,7 +63,7 @@ async fn list_accounts(State(state): State<AppState>,) -> Json<Vec<AccountSummar
         })
         .collect();
     results.sort_by_key(|a| a.id);
-    Json(results)  
+    Json(results)
 }
 
 async fn submit_tx(
@@ -71,10 +72,10 @@ async fn submit_tx(
 ) -> Result<String, RollupError> {
     let mut s = state.rollup.lock().await;
     s.apply_tx(&tx)?;
-    state.storage.save_accounts(&[
-        &s.accounts[&tx.from],
-        &s.accounts[&tx.to],
-    ]).unwrap();
+    state
+        .storage
+        .save_accounts(&[&s.accounts[&tx.from], &s.accounts[&tx.to]])
+        .unwrap();
     Ok("tx applied".to_string())
 }
 
@@ -82,19 +83,19 @@ async fn health() -> &'static str {
     "ok"
 }
 
-
 async fn get_state_root(State(state): State<AppState>) -> String {
     let s = state.rollup.lock().await;
     s.state_root().to_string()
 }
-
 
 async fn get_account(
     Path(id): Path<u32>,
     State(state): State<AppState>,
 ) -> Result<Json<AccountSummary>, RollupError> {
     let s = state.rollup.lock().await;
-    let account = s.accounts.get(&id)
+    let account = s
+        .accounts
+        .get(&id)
         .ok_or(RollupError::AccountNotFound { id })?;
     Ok(Json(AccountSummary {
         id: account.id,
@@ -102,7 +103,6 @@ async fn get_account(
         nonce: account.nonce,
     }))
 }
-
 
 #[tokio::main]
 async fn main() {
@@ -143,7 +143,7 @@ async fn main() {
         .route("/accounts", get(list_accounts).post(create_account))
         .route("/params", get(get_params))
         .with_state(app_state);
-    
+
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Listening on http://0.0.0.0:3000");
     axum::serve(listener, app).await.unwrap();

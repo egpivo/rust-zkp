@@ -1,29 +1,26 @@
-pub mod commitment;
-pub mod sigma;
-pub mod bits;
-pub mod merkle;
 pub mod account;
-pub mod transaction;
 pub mod batch;
+pub mod bits;
+pub mod commitment;
 pub mod dto;
+pub mod merkle;
+pub mod sigma;
+pub mod transaction;
 
+#[cfg(feature = "server")]
+pub mod error;
 #[cfg(feature = "server")]
 pub mod state;
 #[cfg(feature = "server")]
 pub mod storage;
-#[cfg(feature = "server")]
-pub mod error;
 
 #[cfg(feature = "wasm")]
 pub mod wasm;
 
-
-
-
 #[cfg(test)]
 mod tests {
+    use crate::sigma::{Proof, challenge, prove_commit, prove_response};
     use num_bigint::BigUint;
-    use crate::sigma::{prove_commit, prove_response, challenge, Proof};
 
     #[test]
     fn test_fiat_shamir() {
@@ -39,8 +36,7 @@ mod tests {
         // Step 3: prover computes response
         let z = prove_response(&k, &e, &secret);
         // Step 4: verification
-        let proof = Proof {r, z};
+        let proof = Proof { r, z };
         assert!(Proof::verify(&proof, &c, &e, &g, &p));
     }
-
 }

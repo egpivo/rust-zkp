@@ -1,11 +1,10 @@
 use axum::{
-    response::{IntoResponse, Response},
-    http::StatusCode,
     Json,
+    http::StatusCode,
+    response::{IntoResponse, Response},
 };
 use serde::Serialize;
 use thiserror::Error;
-
 
 #[derive(Debug, Error)]
 pub enum RollupError {
@@ -15,10 +14,10 @@ pub enum RollupError {
     #[error("insufficient balance: have {available}, need {requested}")]
     InsufficientBalance { available: u64, requested: u64 },
 
-    #[error("invalid signature")]    
+    #[error("invalid signature")]
     InvalidSignature,
 
-    #[error("state root mismatch")]    
+    #[error("state root mismatch")]
     StateRootMismatch,
 }
 
@@ -32,7 +31,9 @@ impl IntoResponse for RollupError {
     fn into_response(self) -> Response {
         let (status, code) = match &self {
             RollupError::AccountNotFound { .. } => (StatusCode::NOT_FOUND, "ACCOUNT_NOT_FOUND"),
-            RollupError::InsufficientBalance { .. } => (StatusCode::BAD_REQUEST, "INSUFFICIENT_BALANCE"),
+            RollupError::InsufficientBalance { .. } => {
+                (StatusCode::BAD_REQUEST, "INSUFFICIENT_BALANCE")
+            }
             RollupError::InvalidSignature => (StatusCode::UNAUTHORIZED, "INVALID_SIGNATURE"),
             RollupError::StateRootMismatch => (StatusCode::CONFLICT, "STATE_ROOT_MISMATCH"),
         };

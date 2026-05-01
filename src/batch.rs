@@ -1,5 +1,5 @@
-use num_bigint::BigUint;
 use crate::transaction::Transaction;
+use num_bigint::BigUint;
 
 pub struct Batch {
     pub txs: Vec<Transaction>,

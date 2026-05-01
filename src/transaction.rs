@@ -1,5 +1,5 @@
-use num_bigint::BigUint;
 use crate::sigma::Proof;
+use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9,7 +9,7 @@ pub struct Transaction {
     pub amount: u64,
     pub nonce: u64,
     pub proof: Proof,
-    pub challenge_e: BigUint,  
+    pub challenge_e: BigUint,
 }
 
 impl Transaction {
@@ -19,6 +19,6 @@ impl Transaction {
         bytes.extend(self.to.to_be_bytes());
         bytes.extend(self.amount.to_be_bytes());
         bytes.extend(self.nonce.to_be_bytes());
-        bytes        
+        bytes
     }
 }

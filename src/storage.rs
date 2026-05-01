@@ -1,5 +1,5 @@
-use sled::Db;
 use crate::account::Account;
+use sled::Db;
 
 pub struct Storage {
     db: Db,
