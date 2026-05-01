@@ -6,6 +6,7 @@ use axum::{
 use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use tower_http::cors::{Any, CorsLayer};
 use tokio::sync::Mutex;
 use zkp::account::Account;
 use zkp::dto::AccountSummary;
@@ -13,6 +14,7 @@ use zkp::error::RollupError;
 use zkp::state::State as RollupState;
 use zkp::storage::Storage;
 use zkp::transaction::Transaction;
+
 
 #[derive(Clone)]
 struct AppState {
@@ -134,6 +136,11 @@ async fn main() {
         storage: Arc::new(storage),
     };
 
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     let app = Router::new()
         .route("/", get(|| async { "rollup api" }))
         .route("/health", get(health))
@@ -142,6 +149,7 @@ async fn main() {
         .route("/tx", post(submit_tx))
         .route("/accounts", get(list_accounts).post(create_account))
         .route("/params", get(get_params))
+        .layer(cors)
         .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

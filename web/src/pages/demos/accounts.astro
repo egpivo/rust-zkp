@@ -1,0 +1,52 @@
+---
+import Layout from '../../layouts/Layout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Account Explorer">
+  <a href={`${base}/demos/`} class="back">← Playground</a>
+  <h1>Account Explorer</h1>
+  
+  <div class="config">
+    <label>Server URL: 
+      <input id="server" value="http://localhost:3000" />
+    </label>
+    <button id="refresh">Refresh</button>
+  </div>
+  
+  <div id="status"></div>
+  <table id="accounts-table">
+    <thead><tr><th>ID</th><th>Balance</th><th>Nonce</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    
+    async function loadAccounts() {
+      const url = $('server').value + '/accounts';
+      $('status').innerText = 'Loading...';
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const accounts = await resp.json();
+
+        // Render
+        const tbody = $('accounts-table').querySelector('tbody');
+        tbody.innerHTML = '';
+        for (const a of accounts) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${a.id}</td><td>${a.balance}</td><td>${a.nonce}</td>`;
+            tbody.appendChild(tr);
+        }
+
+        $('status').innerText = `${accounts.length} accounts`;
+      } catch (e) {
+        $('status').innerText = `Error: ${e.message}`;
+      }
+    }
+    
+    $('refresh').addEventListener('click', loadAccounts);
+    loadAccounts();
+  </script>
+</Layout>
