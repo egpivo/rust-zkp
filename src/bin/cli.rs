@@ -52,7 +52,9 @@ enum Command {
 
 #[derive(serde::Deserialize)]
 struct ParamsResponse {
+    #[serde(with = "zkp::serde_helpers::biguint_string")]
     p: BigUint,
+    #[serde(with = "zkp::serde_helpers::biguint_string")]
     g: BigUint,
 }
 
@@ -97,7 +99,7 @@ async fn main() {
             let body = json!({
                 "id": id,
                 "balance": balance,
-                "pubkey": pubkey,
+                "pubkey": pubkey.to_string(),
             });
 
             let client = reqwest::Client::new();

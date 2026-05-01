@@ -15,7 +15,9 @@ pub fn prove_response(k: &BigUint, e: &BigUint, secret: &BigUint) -> BigUint {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proof {
+    #[serde(with = "crate::serde_helpers::biguint_string")]
     pub r: BigUint, // randomly commit g^k mod p
+    #[serde(with = "crate::serde_helpers::biguint_string")]
     pub z: BigUint, // response = k + e * secret
 }
 

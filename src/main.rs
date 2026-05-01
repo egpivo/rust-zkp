@@ -28,7 +28,9 @@ struct AppState {
 
 #[derive(Serialize)]
 struct ParamsResponse {
+    #[serde(with = "zkp::serde_helpers::biguint_string")]
     p: BigUint,
+    #[serde(with = "zkp::serde_helpers::biguint_string")]
     g: BigUint,
 }
 
@@ -44,6 +46,7 @@ async fn get_params(State(state): State<AppState>) -> Json<ParamsResponse> {
 struct CreateAccountRequest {
     id: u32,
     balance: u64,
+    #[serde(with = "zkp::serde_helpers::biguint_string")]
     pubkey: BigUint,
 }
 

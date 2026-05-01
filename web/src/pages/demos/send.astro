@@ -43,8 +43,8 @@ const base = import.meta.env.BASE_URL;
         const paramsResp = await fetch(server + '/params');
         if (!paramsResp.ok) throw new Error(`/params HTTP ${paramsResp.status}`);
         const params = await paramsResp.json();
-        const p = params.p.toString();
-        const g = params.g.toString();
+        const p = String(params.p);
+        const g = String(params.g);
         // BigUint comes as array of u32 limbs — for small numbers, [0] is enough
         // For our toy params (p=223, g=4), this works.
 

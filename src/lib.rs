@@ -4,6 +4,7 @@ pub mod bits;
 pub mod commitment;
 pub mod dto;
 pub mod merkle;
+pub mod serde_helpers;
 pub mod sigma;
 pub mod transaction;
 

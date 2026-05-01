@@ -9,6 +9,7 @@ pub struct Transaction {
     pub amount: u64,
     pub nonce: u64,
     pub proof: Proof,
+    #[serde(with = "crate::serde_helpers::biguint_string")]
     pub challenge_e: BigUint,
 }
 
