@@ -6,15 +6,14 @@ use axum::{
 use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tower_http::cors::{Any, CorsLayer};
 use tokio::sync::Mutex;
+use tower_http::cors::{Any, CorsLayer};
 use zkp::account::Account;
 use zkp::dto::AccountSummary;
 use zkp::error::RollupError;
 use zkp::state::State as RollupState;
 use zkp::storage::Storage;
 use zkp::transaction::Transaction;
-
 
 #[derive(Clone)]
 struct AppState {
