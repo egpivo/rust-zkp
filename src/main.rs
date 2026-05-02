@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::{Mutex, mpsc};
 use tokio::time::{Duration, interval};
+use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{info, instrument, warn};
 use tracing_subscriber::EnvFilter;
@@ -237,6 +238,15 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
+    let governor_conf = std::sync::Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(2)
+            .burst_size(5)
+            .finish()
+            .unwrap(),
+    );
+    let governor_layer = GovernorLayer::new(governor_conf);
+
     let app = Router::new()
         .route("/", get(|| async { "rollup api" }))
         .route("/health", get(health))
@@ -250,6 +260,7 @@ async fn main() {
         )
         .route("/params", get(get_params))
         .route("/mempool", get(get_mempool))
+        .layer(governor_layer)
         .layer(cors)
         .with_state(app_state);
 
@@ -261,5 +272,10 @@ async fn main() {
         .await
         .unwrap();
     info!(port, "rollup server listening");
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await
+    .unwrap();
 }
