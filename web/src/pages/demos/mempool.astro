@@ -1,0 +1,188 @@
+---
+import Layout from '../../layouts/Layout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Mempool Stream">
+  <a href={`${base}/demos/`} class="back">← Playground</a>
+  <h1>Mempool Stream</h1>
+  <p class="subtitle">
+    Live WebSocket connection to the rollup server. The background batch task
+    runs every 5 seconds — every drained batch is broadcast to all connected
+    clients via <code>tokio::sync::broadcast</code>.
+  </p>
+
+  <section class="card">
+    <h2>Connection</h2>
+    <div class="grid">
+      <label>WebSocket URL
+        <input id="url" value="wss://rust-zkp.onrender.com/ws/mempool">
+      </label>
+    </div>
+    <div class="actions">
+      <button id="connect">Connect</button>
+      <button id="disconnect" disabled>Disconnect</button>
+      <button id="clear">Clear</button>
+    </div>
+    <div class="status-row">
+      <span class="label">Status</span>
+      <span id="status" class="badge">disconnected</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Live events</h2>
+    <p class="hint">
+      Submit a transaction in another tab via the <a href={`${base}/demos/send`}>Transaction Builder</a>.
+      Within 5 seconds the batch task runs and you'll see the result here.
+    </p>
+    <div id="log" class="log"></div>
+  </section>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    let ws = null;
+
+    function setStatus(s) {
+      $('status').innerText = s;
+      $('status').className = `badge ${s}`;
+      $('connect').disabled = (s === 'connected' || s === 'connecting');
+      $('disconnect').disabled = (s !== 'connected');
+    }
+
+    function append(line, kind = 'info') {
+      const ts = new Date().toLocaleTimeString();
+      const row = document.createElement('div');
+      row.className = `event ${kind}`;
+      row.innerHTML = `<span class="ts">${ts}</span> <span class="msg">${line}</span>`;
+      $('log').appendChild(row);
+      $('log').scrollTop = $('log').scrollHeight;
+    }
+
+    $('connect').addEventListener('click', () => {
+      const url = $('url').value;
+      setStatus('connecting');
+      append(`opening ${url}...`, 'meta');
+      try {
+        ws = new WebSocket(url);
+      } catch (e) {
+        append(`Error: ${e.message ?? e}`, 'err');
+        setStatus('disconnected');
+        return;
+      }
+      ws.onopen = () => {
+        setStatus('connected');
+        append('connected', 'meta');
+      };
+      ws.onmessage = e => append(e.data, 'event');
+      ws.onerror = () => append('connection error', 'err');
+      ws.onclose = e => {
+        setStatus('disconnected');
+        append(`closed (code=${e.code})`, 'meta');
+        ws = null;
+      };
+    });
+
+    $('disconnect').addEventListener('click', () => {
+      if (ws) ws.close();
+    });
+
+    $('clear').addEventListener('click', () => {
+      $('log').innerHTML = '';
+    });
+  </script>
+
+  <style>
+    .subtitle { color: var(--fg-muted); }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      background: white;
+      margin: 16px 0;
+    }
+    .card h2 { margin-top: 0; font-size: 1.1rem; }
+    .hint {
+      color: var(--fg-muted);
+      font-size: 0.92rem;
+      margin: 0 0 12px;
+    }
+    .grid { display: flex; gap: 16px; flex-wrap: wrap; }
+    .grid label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+      flex: 1;
+      min-width: 280px;
+    }
+    .grid input {
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 0.9rem;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    button {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled {
+      background: var(--fg-muted);
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+    .status-row {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .status-row .label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--fg-muted);
+    }
+    .badge {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 0.8rem;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--code-bg);
+      color: var(--fg-muted);
+    }
+    .badge.connecting { background: #fff7e6; color: #b86e00; }
+    .badge.connected  { background: #e6f7ee; color: #2a7a2a; }
+    .log {
+      margin-top: 12px;
+      max-height: 360px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      background: #0d1117;
+      color: #d4d4d4;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    .event { display: block; }
+    .event .ts { color: #6e7681; margin-right: 12px; }
+    .event.meta .msg { color: #8b949e; }
+    .event.err  .msg { color: #ff7b72; }
+    .event.event .msg { color: #79c0ff; }
+  </style>
+</Layout>
