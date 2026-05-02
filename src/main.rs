@@ -1,7 +1,9 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
-    http::StatusCode,
+    extract::{Path, Request, State},
+    http::{HeaderMap, StatusCode},
+    middleware::{self, Next},
+    response::Response,
     routing::{get, post},
 };
 use num_bigint::BigUint;
@@ -126,6 +128,33 @@ async fn get_account(
     }))
 }
 
+async fn require_api_key(
+    headers: HeaderMap,
+    request: Request,
+    next: Next,
+) -> Result<Response, (StatusCode, &'static str)> {
+    let expected = std::env::var("API_KEY").unwrap_or_default();
+
+    // No API_KEY configured -> skip auth (dev mode)
+    if expected.is_empty() {
+        return Ok(next.run(request).await);
+    }
+
+    let provided = headers
+        .get("x-api-key")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    if provided == expected {
+        Ok(next.run(request).await)
+    } else {
+        Err((
+            StatusCode::UNAUTHORIZED,
+            "missing or invalid x-api-key header",
+        ))
+    }
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -214,7 +243,11 @@ async fn main() {
         .route("/state-root", get(get_state_root))
         .route("/accounts/{id}", get(get_account))
         .route("/tx", post(submit_tx))
-        .route("/accounts", get(list_accounts).post(create_account))
+        .route("/accounts", get(list_accounts))
+        .route(
+            "/accounts",
+            post(create_account).layer(middleware::from_fn(require_api_key)),
+        )
         .route("/params", get(get_params))
         .route("/mempool", get(get_mempool))
         .layer(cors)
