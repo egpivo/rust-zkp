@@ -240,8 +240,8 @@ async fn main() {
 
     let governor_conf = std::sync::Arc::new(
         GovernorConfigBuilder::default()
-            .per_second(2)
-            .burst_size(5)
+            .per_second(20)
+            .burst_size(50)
             .finish()
             .unwrap(),
     );

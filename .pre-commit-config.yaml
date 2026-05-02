@@ -2,14 +2,21 @@ repos:
   - repo: local
     hooks:
       - id: cargo-fmt
-        name: cargo fmt
-        entry: cargo fmt --all -- --check
+        name: cargo fmt (auto-fix)
+        entry: cargo fmt --all
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      - id: cargo-clippy-fix
+        name: cargo clippy --fix (auto-fix)
+        entry: cargo clippy --all-targets --all-features --fix --allow-dirty --allow-staged
         language: system
         types: [rust]
         pass_filenames: false
 
       - id: cargo-clippy
-        name: cargo clippy
+        name: cargo clippy (final check)
         entry: cargo clippy --all-targets --all-features -- -D warnings
         language: system
         types: [rust]
