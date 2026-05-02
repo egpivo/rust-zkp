@@ -1,15 +1,16 @@
 use axum::{
     Json, Router,
+    extract::ws::{Message, WebSocket, WebSocketUpgrade},
     extract::{Path, Request, State},
     http::{HeaderMap, StatusCode},
     middleware::{self, Next},
-    response::Response,
+    response::{IntoResponse, Response},
     routing::{get, post},
 };
 use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::{Mutex, broadcast, mpsc};
 use tokio::time::{Duration, interval};
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::cors::{Any, CorsLayer};
@@ -27,6 +28,7 @@ struct AppState {
     rollup: Arc<Mutex<RollupState>>,
     storage: Arc<Storage>,
     mempool_tx: mpsc::Sender<Transaction>,
+    events_tx: broadcast::Sender<String>,
 }
 
 #[derive(Serialize)]
@@ -156,6 +158,21 @@ async fn require_api_key(
     }
 }
 
+async fn ws_mempool(ws: WebSocketUpgrade, State(state): State<AppState>) -> impl IntoResponse {
+    let rx = state.events_tx.subscribe();
+    ws.on_upgrade(move |socket| async move {
+        ws_loop(socket, rx).await;
+    })
+}
+
+async fn ws_loop(mut socket: WebSocket, mut rx: broadcast::Receiver<String>) {
+    while let Ok(msg) = rx.recv().await {
+        if socket.send(Message::Text(msg.into())).await.is_err() {
+            break;
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -194,10 +211,13 @@ async fn main() {
     for account in storage.load_all_accounts().unwrap() {
         rollup_state.add_account(account);
     }
+
+    let (events_tx, _) = broadcast::channel::<String>(100);
     let app_state = AppState {
         rollup: Arc::new(Mutex::new(rollup_state)),
         storage: Arc::new(storage),
         mempool_tx,
+        events_tx: events_tx.clone(),
     };
     let bg_state = app_state.clone();
     let mut bg_rx = mempool_rx;
@@ -230,6 +250,9 @@ async fn main() {
             drop(s);
 
             info!(applied, count, "batch applied");
+            let _ = bg_state
+                .events_tx
+                .send(format!("batch applied {applied}/{count} txs"));
         }
     });
 
@@ -260,6 +283,7 @@ async fn main() {
         )
         .route("/params", get(get_params))
         .route("/mempool", get(get_mempool))
+        .route("/ws/mempool", get(ws_mempool))
         .layer(governor_layer)
         .layer(cors)
         .with_state(app_state);
