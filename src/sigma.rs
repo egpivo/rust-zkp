@@ -1,3 +1,4 @@
+use crate::transcript::fs_piece;
 use num_bigint::{BigUint, RandBigInt};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -49,12 +50,6 @@ pub fn challenge_for_tx(
     hasher.update(r.to_bytes_be());
     hasher.update(message);
     BigUint::from_bytes_be(&hasher.finalize()) % p
-}
-
-fn fs_piece(hasher: &mut Sha256, tag: u8, bytes: &[u8]) {
-    hasher.update([tag]);
-    hasher.update((bytes.len() as u32).to_be_bytes());
-    hasher.update(bytes);
 }
 
 pub fn challenge_sigma_dl(g: &BigUint, c: &BigUint, r: &BigUint, p: &BigUint) -> BigUint {

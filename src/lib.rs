@@ -7,6 +7,7 @@ pub mod merkle;
 pub mod serde_helpers;
 pub mod sigma;
 pub mod transaction;
+pub mod transcript;
 
 #[cfg(feature = "server")]
 pub mod error;
