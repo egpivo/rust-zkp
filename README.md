@@ -38,4 +38,4 @@ Pre-commit hooks: `pip install pre-commit && pre-commit install`
 
 ## Status
 
-Personal learning project. Crypto is intentionally simplified (small primes, no SNARK) — the value is in seeing how every layer composes. See [`notes/`](https://egpivo.github.io/rust-zkp/notes/) for math, design rationale, and Rust patterns walked through layer by layer.
+Personal learning project. Crypto is intentionally simplified (small primes, no SNARK) — the value is in seeing how every layer composes. Start from [`docs/zk_high_level.md`](docs/zk_high_level.md) (witness → proof → verifier; claims → modules), then [`notes/`](https://egpivo.github.io/rust-zkp/notes/) for each exercise and the backend.

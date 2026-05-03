@@ -1,0 +1,66 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const root = import.meta.env.BASE_URL.endsWith('/')
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+const loop = `${root}diagrams/zk-loop.svg`;
+const claims = `${root}diagrams/zk-claims-map.svg`;
+---
+
+<Layout title="ZK mental map (high level)">
+  <h1>ZK in this repo (high level)</h1>
+
+  <p>
+    SVG sources: <code>web/public/diagrams/zk-loop.svg</code> and <code>zk-claims-map.svg</code> — edit in any text editor or Inkscape.
+  </p>
+
+  <h2>1. Witness → relation → proof → verifier</h2>
+  <img
+    src={loop}
+    alt="ZK loop: witness w, relation R(x,w), proof pi, verifier V(x,pi), public input x"
+    width="820"
+    height="300"
+    loading="lazy"
+    style="max-width: 100%; height: auto; display: block; margin: 16px 0;"
+  />
+  <ul>
+    <li><strong>Witness</strong> <code>w</code>: secrets only the prover knows.</li>
+    <li><strong>Public</strong> <code>x</code>: roots, pubkeys, declared values, etc.</li>
+    <li><strong>Proof</strong> <code>π</code>: one message the verifier checks <strong>without</strong> learning <code>w</code>.</li>
+  </ul>
+
+  <h2>2. Claims → modules → rollup</h2>
+  <img
+    src={claims}
+    alt="Claims mapped to sigma, commitment, bits, merkle, then mini rollup"
+    width="900"
+    height="400"
+    loading="lazy"
+    style="max-width: 100%; height: auto; display: block; margin: 16px 0;"
+  />
+  <p>
+    Exercises line up loosely: <strong>Ex1</strong> → Sigma, <strong>Ex2</strong> → Pedersen sum, <strong>Ex3</strong> → bits + OR, <strong>Ex4</strong> → Merkle, then the <strong>rollup</strong> composes signatures + state tree.
+  </p>
+
+  <h2>3. Fiat–Shamir</h2>
+  <p>
+    Interactive Sigma is commit → challenge → response. <strong>Fiat–Shamir</strong> sets <code>e = Hash(transcript)</code> so the proof is non-interactive. Domain-separated hashing: <code>transcript.rs</code> / patterns in <code>sigma.rs</code>.
+  </p>
+
+  <h2>4. Strict vs illustrative ZK</h2>
+  <table>
+    <thead>
+      <tr><th>Piece</th><th>Role</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Sigma + FS, bit-OR</td><td>Σ-protocol style NIZK in the ROM (toy group).</td></tr>
+      <tr><td>Basic Merkle open</td><td><strong>Membership</strong>; hiding the leaf needs extra machinery.</td></tr>
+      <tr><td>Rollup demo</td><td>System composition; not replacing the primitives above with a SNARK.</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    Repo copy (Markdown + GitHub image paths): <a href="https://github.com/egpivo/rust-zkp/blob/main/docs/zk_high_level.md">docs/zk_high_level.md</a>
+  </p>
+</Layout>

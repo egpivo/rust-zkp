@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 300" width="820" height="300" role="img" aria-labelledby="t1 d1">
+  <title id="t1">ZK proof loop</title>
+  <desc id="d1">Witness and relation produce proof pi; verifier checks V(x,pi) using public x.</desc>
+  <defs>
+    <marker id="m" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#0066cc"/>
+    </marker>
+    <style type="text/css"><![CDATA[
+      .box { fill: #fafafa; stroke: #d0d0d0; stroke-width: 1.5; rx: 8; }
+      .box-a { fill: #e8f2fc; stroke: #0066cc; stroke-width: 2; rx: 8; }
+      .lb { font: 600 15px ui-sans-serif, system-ui, sans-serif; fill: #1a1a1a; }
+      .sm { font: 13px ui-sans-serif, system-ui, sans-serif; fill: #555; }
+      .rg { font: 700 11px ui-sans-serif, system-ui, sans-serif; fill: #888; letter-spacing: 0.05em; }
+      .ln { stroke: #0066cc; stroke-width: 2.5; fill: none; marker-end: url(#m); }
+    ]]></style>
+  </defs>
+
+  <text x="24" y="34" class="rg">PROVER (PRIVATE)</text>
+  <rect class="box" x="20" y="46" width="200" height="54"/>
+  <text x="120" y="76" text-anchor="middle" class="lb">Witness</text>
+  <text x="120" y="94" text-anchor="middle" class="sm">w</text>
+
+  <path class="ln" d="M 120 102 L 120 118"/>
+
+  <rect class="box" x="20" y="118" width="200" height="70"/>
+  <text x="120" y="150" text-anchor="middle" class="lb">Relation</text>
+  <text x="120" y="172" text-anchor="middle" class="sm">R(x, w) holds</text>
+
+  <path class="ln" d="M 222 153 L 298 153"/>
+
+  <text x="318" y="34" class="rg">PROOF</text>
+  <rect class="box-a" x="300" y="118" width="160" height="70"/>
+  <text x="380" y="154" text-anchor="middle" class="lb">Proof ?</text>
+  <text x="380" y="174" text-anchor="middle" class="sm">one message</text>
+
+  <path class="ln" d="M 462 153 L 538 153"/>
+
+  <text x="558" y="34" class="rg">VERIFIER</text>
+  <rect class="box" x="540" y="118" width="260" height="96"/>
+  <text x="670" y="156" text-anchor="middle" class="lb">Accept iff V(x, ?)</text>
+  <text x="670" y="182" text-anchor="middle" class="sm">does not recover w</text>
+
+  <text x="558" y="246" class="rg">PUBLIC INPUT</text>
+  <rect class="box" x="540" y="258" width="260" height="36"/>
+  <text x="670" y="282" text-anchor="middle" class="lb">x</text>
+
+  <path class="ln" d="M 670 258 L 670 216"/>
+</svg>
