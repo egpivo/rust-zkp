@@ -1,0 +1,153 @@
+---
+import Layout from '../../layouts/Layout.astro';
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Bit-OR Proof">
+  <a href={`${base}/demos/`} class="back">← Playground</a>
+  <h1>Pedersen bit is 0 or 1 (Schnorr OR)</h1>
+  <p class="subtitle">
+    Commit <code>C = g<sup>b</sup> h<sup>r</sup></code> with <code>b</code> in <code>&#123;0,1&#125;</code>, then prove (without opening the commitment) that
+    <code>b</code> is binary using a disjunctive Schnorr proof + Fiat–Shamir — same primitive as the gap called out in
+    <a href={`${base}/notes/ex3_threshold`}>Ex3</a>.
+  </p>
+
+  <section class="card">
+    <h2>Parameters</h2>
+    <p class="hint">Use a prime <code>p</code> and <code>gcd(g,p)=1</code> (toy: 223, 4, 3 match the Rust tests).</p>
+    <div class="grid">
+      <label>b (0 or 1) <input id="b" type="number" min="0" max="1" value="0" /></label>
+      <label>r (blinding) <input id="r" value="17" /></label>
+      <label>g <input id="g" value="4" /></label>
+      <label>h <input id="h" value="3" /></label>
+      <label>p <input id="p" value="223" /></label>
+    </div>
+    <button id="prove">Prove</button>
+    <button id="verify" type="button" class="secondary">Verify again</button>
+    <button id="tamper" type="button" class="danger">Tamper proof (break)</button>
+  </section>
+
+  <section class="card">
+    <h2>Result</h2>
+    <div class="result-row"><span class="label">C = g<sup>b</sup>h<sup>r</sup></span><code id="c-out">—</code></div>
+    <div class="result-row"><span class="label">verify_ok (from prove)</span><code id="prove-ok">—</code></div>
+    <div class="result-row"><span class="label">Re-verify</span><code id="reverify">—</code></div>
+    <h3>Proof JSON</h3>
+    <pre id="proof-json" class="json">—</pre>
+  </section>
+
+  <script type="module" define:vars={{ wasmBase: base }}>
+    const m = await import(`${wasmBase}/pkg/zkp.js`);
+    await m.default(`${wasmBase}/pkg/zkp_bg.wasm`);
+
+    const $ = id => document.getElementById(id);
+
+    let last = null;
+
+    function runProve() {
+      const b = $('b').value;
+      const r = $('r').value;
+      const g = $('g').value;
+      const h = $('h').value;
+      const p = $('p').value;
+      try {
+        const raw = m.bit_or_prove(b, r, g, h, p);
+        const data = JSON.parse(raw);
+        if (data.error) {
+          last = null;
+          $('c-out').innerText = '—';
+          $('prove-ok').innerText = data.error;
+          $('prove-ok').className = 'err';
+          $('reverify').innerText = '—';
+          $('proof-json').innerText = raw;
+          return;
+        }
+        last = data;
+        $('c-out').innerText = data.c_bit;
+        $('prove-ok').innerText = String(data.verify_ok);
+        $('prove-ok').className = data.verify_ok ? 'ok' : 'err';
+        $('proof-json').innerText = JSON.stringify(data.proof, null, 2);
+        doVerify();
+      } catch (e) {
+        last = null;
+        $('proof-json').innerText = String(e.message ?? e);
+      }
+    }
+
+    function doVerify() {
+      if (!last) {
+        $('reverify').innerText = '—';
+        return;
+      }
+      const g = $('g').value;
+      const h = $('h').value;
+      const p = $('p').value;
+      const proofStr = JSON.stringify(last.proof);
+      const out = JSON.parse(m.bit_or_verify(last.c_bit, proofStr, g, h, p));
+      $('reverify').innerText = out.error ? out.error : String(out.valid);
+      $('reverify').className = out.valid ? 'ok' : 'err';
+    }
+
+    $('prove').addEventListener('click', runProve);
+    $('verify').addEventListener('click', doVerify);
+    $('tamper').addEventListener('click', () => {
+      if (!last?.proof) return;
+      last.proof.s0 = (BigInt(last.proof.s0) + 1n).toString();
+      $('proof-json').innerText = JSON.stringify(last.proof, null, 2);
+      doVerify();
+    });
+  </script>
+
+  <style>
+    .back { display: inline-block; margin-bottom: 12px; font-size: 0.9rem; }
+    .subtitle { color: var(--fg-muted); }
+    .hint { font-size: 0.9rem; color: var(--fg-muted); margin-top: 0; }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      background: white;
+      margin: 16px 0;
+    }
+    .card h2, .card h3 { margin-top: 0; font-size: 1.1rem; }
+    .grid {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .grid label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.8rem;
+      color: var(--fg-muted);
+      gap: 4px;
+    }
+    .grid input { width: 100px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; font-family: ui-monospace, monospace; }
+    button {
+      padding: 8px 14px;
+      margin-right: 8px;
+      margin-top: 8px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button.secondary { background: #555; }
+    button.danger { background: #a33; }
+    .result-row { display: flex; gap: 12px; margin: 8px 0; font-size: 0.9rem; align-items: center; }
+    .result-row .label { min-width: 200px; color: var(--fg-muted); }
+    code.ok { color: #2a7a2a; font-weight: 600; }
+    code.err { color: #c33; font-weight: 600; }
+    pre.json {
+      background: var(--code-bg);
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 0.78rem;
+      max-height: 320px;
+    }
+  </style>
+</Layout>

@@ -1,4 +1,4 @@
-use crate::bits::to_bits;
+use crate::bits::{BitOrProof, prove_bit_or, to_bits, verify_bit_or};
 use crate::commitment::commit;
 use crate::merkle::{build_tree, hash_pair, merkle_proof, verify_merkle};
 use crate::sigma::{Proof, challenge_for_tx, prove_commit, prove_response};
@@ -306,4 +306,195 @@ pub fn range_decompose(v_str: &str, t_str: &str, num_bits: usize) -> String {
         reconstructed: reconstructed.to_string(),
     })
     .unwrap()
+}
+
+// ------------------ Bit-OR (Pedersen bit ∈ {0,1}) ------------------
+
+fn bit_or_proof_json(p: &BitOrProof) -> serde_json::Value {
+    serde_json::json!({
+        "a0": p.a0.to_string(),
+        "a1": p.a1.to_string(),
+        "s0": p.s0.to_string(),
+        "s1": p.s1.to_string(),
+        "e_fake": p.e_fake.to_string(),
+        "fake_is_branch1": p.fake_is_branch1,
+    })
+}
+
+fn parse_proof_json(proof_json: &str) -> Result<BitOrProof, String> {
+    let v: serde_json::Value = serde_json::from_str(proof_json).map_err(|e| e.to_string())?;
+    let g = |k: &str| -> Result<BigUint, String> {
+        v[k].as_str()
+            .ok_or_else(|| format!("missing or non-string field: {k}"))?
+            .parse::<BigUint>()
+            .map_err(|e| format!("{k}: {e}"))
+    };
+    Ok(BitOrProof {
+        a0: g("a0")?,
+        a1: g("a1")?,
+        s0: g("s0")?,
+        s1: g("s1")?,
+        e_fake: g("e_fake")?,
+        fake_is_branch1: v["fake_is_branch1"]
+            .as_bool()
+            .ok_or_else(|| "missing fake_is_branch1".to_string())?,
+    })
+}
+
+/// Build `C = g^b h^r` and a Schnorr-OR proof that `b ∈ {0,1}` (Fiat–Shamir). Returns JSON.
+#[wasm_bindgen]
+pub fn bit_or_prove(b_str: &str, r_str: &str, g_str: &str, h_str: &str, p_str: &str) -> String {
+    let parse = |s: &str, name: &str| {
+        s.parse::<BigUint>()
+            .map_err(|_| format!("invalid {name}: must be decimal BigUint"))
+    };
+    let res = (|| {
+        let b = parse(b_str, "b")?;
+        if b != BigUint::from(0u32) && b != BigUint::from(1u32) {
+            return Err("b must be 0 or 1".to_string());
+        }
+        let r = parse(r_str, "r")?;
+        let g = parse(g_str, "g")?;
+        let h = parse(h_str, "h")?;
+        let p = parse(p_str, "p")?;
+        let c = commit(&b, &r, &g, &h, &p);
+        let proof = prove_bit_or(&b, &r, &c, &g, &h, &p);
+        let verify_ok = verify_bit_or(&proof, &c, &g, &h, &p);
+        Ok(serde_json::json!({
+            "c_bit": c.to_string(),
+            "proof": bit_or_proof_json(&proof),
+            "verify_ok": verify_ok,
+        }))
+    })();
+    match res {
+        Ok(j) => j.to_string(),
+        Err(e) => serde_json::json!({ "error": e }).to_string(),
+    }
+}
+
+/// Verify a `proof` JSON (same shape as `bit_or_prove` → `proof`) against `c_bit`.
+#[wasm_bindgen]
+pub fn bit_or_verify(
+    c_bit_str: &str,
+    proof_json: &str,
+    g_str: &str,
+    h_str: &str,
+    p_str: &str,
+) -> String {
+    let res: Result<bool, String> = (|| {
+        let c = c_bit_str
+            .parse::<BigUint>()
+            .map_err(|_| "invalid c_bit".to_string())?;
+        let proof = parse_proof_json(proof_json)?;
+        let g = g_str
+            .parse::<BigUint>()
+            .map_err(|_| "invalid g".to_string())?;
+        let h = h_str
+            .parse::<BigUint>()
+            .map_err(|_| "invalid h".to_string())?;
+        let p = p_str
+            .parse::<BigUint>()
+            .map_err(|_| "invalid p".to_string())?;
+        Ok(verify_bit_or(&proof, &c, &g, &h, &p))
+    })();
+    match res {
+        Ok(valid) => serde_json::json!({ "valid": valid }).to_string(),
+        Err(e) => serde_json::json!({ "error": e, "valid": false }).to_string(),
+    }
+}
+
+/// Ex3-style: bit decomposition + Pedersen commitments + bit-OR per bit + homomorphic check.
+#[wasm_bindgen]
+pub fn range_zk_verify(
+    v_str: &str,
+    t_str: &str,
+    num_bits: usize,
+    g_str: &str,
+    h_str: &str,
+    p_str: &str,
+) -> String {
+    const MAX_BITS: usize = 32;
+    if num_bits == 0 || num_bits > MAX_BITS {
+        return serde_json::json!({
+            "error": format!("num_bits must be 1..={MAX_BITS}")
+        })
+        .to_string();
+    }
+    let res = (|| {
+        let v = v_str
+            .parse::<BigUint>()
+            .map_err(|_| "invalid v".to_string())?;
+        let t = t_str
+            .parse::<BigUint>()
+            .map_err(|_| "invalid T".to_string())?;
+        let g = g_str
+            .parse::<BigUint>()
+            .map_err(|_| "invalid g".to_string())?;
+        let h = h_str
+            .parse::<BigUint>()
+            .map_err(|_| "invalid h".to_string())?;
+        let p = p_str
+            .parse::<BigUint>()
+            .map_err(|_| "invalid p".to_string())?;
+
+        if v < t {
+            return Err("v < T: cannot prove non-negative delta".to_string());
+        }
+
+        let delta = &v - &t;
+        let bits = to_bits(&delta, num_bits);
+        let mut rng = rand::thread_rng();
+        let r_bits: Vec<BigUint> = (0..num_bits).map(|_| rng.gen_biguint_below(&p)).collect();
+        let c_bits: Vec<BigUint> = bits
+            .iter()
+            .zip(&r_bits)
+            .map(|(b, r)| commit(b, r, &g, &h, &p))
+            .collect();
+
+        let mut bit_rows = Vec::new();
+        let mut all_or_ok = true;
+        for (i, (b, (c_i, r_i))) in bits.iter().zip(c_bits.iter().zip(&r_bits)).enumerate() {
+            let proof = prove_bit_or(b, r_i, c_i, &g, &h, &p);
+            let ok = verify_bit_or(&proof, c_i, &g, &h, &p);
+            all_or_ok &= ok;
+            bit_rows.push(serde_json::json!({
+                "index": i,
+                "b": b.to_string(),
+                "r": r_i.to_string(),
+                "c": c_i.to_string(),
+                "or_valid": ok,
+                "proof": bit_or_proof_json(&proof),
+            }));
+        }
+
+        let r_delta: BigUint = (0..num_bits)
+            .map(|i| &r_bits[i] * BigUint::from(1u32 << i))
+            .sum();
+        let mut lhs = BigUint::from(1u32);
+        for (i, c_i) in c_bits.iter().enumerate() {
+            lhs = (lhs * c_i.modpow(&BigUint::from(1u32 << i), &p)) % &p;
+        }
+        let rhs = commit(&delta, &r_delta, &g, &h, &p);
+        let homomorphic_ok = lhs == rhs;
+
+        let mut reconstructed = BigUint::from(0u32);
+        for (i, b) in bits.iter().enumerate() {
+            reconstructed += b * BigUint::from(1u32 << i);
+        }
+        let bits_reconstruct_ok = reconstructed == delta;
+
+        Ok(serde_json::json!({
+            "delta": delta.to_string(),
+            "bits": bits.iter().map(|b| b.to_string()).collect::<Vec<_>>(),
+            "homomorphic_ok": homomorphic_ok,
+            "bits_reconstruct_ok": bits_reconstruct_ok,
+            "all_bit_or_ok": all_or_ok,
+            "all_ok": all_or_ok && homomorphic_ok && bits_reconstruct_ok,
+            "bit_rows": bit_rows,
+        }))
+    })();
+    match res {
+        Ok(j) => j.to_string(),
+        Err(e) => serde_json::json!({ "error": e }).to_string(),
+    }
 }

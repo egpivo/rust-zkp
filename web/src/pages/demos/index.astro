@@ -29,6 +29,12 @@ const demos = [
     status: "live",
   },
   {
+    slug: "bit-or",
+    title: "Bit-OR (binary Pedersen)",
+    desc: "Prove a committed bit is 0 or 1 with a Schnorr disjunction + Fiat–Shamir.",
+    status: "live",
+  },
+  {
     slug: "send",
     title: "Transaction Builder",
     desc: "Sign a transaction in browser, submit to your rollup server.",
@@ -53,7 +59,7 @@ const demos = [
   <h1>Playground</h1>
   <p class="subtitle">
     Interactive demos powered by the Rust ZKP library compiled to WebAssembly.
-    Pedersen, Sigma, Merkle, and range demos run entirely in your browser.
+    Pedersen, Sigma, Merkle, range, and bit-OR demos run entirely in your browser.
     <strong>Transaction Builder</strong>, <strong>Account Explorer</strong>, and <strong>Mempool Stream</strong>
     call a rollup HTTP/WebSocket URL (defaults to the hosted demo API); point them at <code>http://localhost:3000</code> when you run <code>cargo run --bin zkp</code> locally.
     If the hosted API is cold, the first request can take ~30–60s — retry once.

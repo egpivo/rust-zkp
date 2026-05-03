@@ -20,6 +20,17 @@ const base = import.meta.env.BASE_URL;
       <label>num_bits <input id="num-bits" type="number" value="8" min="1" max="32"></label>
     </div>
     <button id="run">Decompose</button>
+    <p class="zk-hint">
+      For the full check (random blinding per bit, Pedersen commitments, Schnorr-OR per bit, homomorphic product), set
+      <code>g, h, p</code> below and run <strong>Full ZK check</strong> — same path as
+      <a href={`${base}/demos/bit-or`}>Bit-OR demo</a> + Ex3.
+    </p>
+    <div class="grid zk-grid">
+      <label>g <input id="zk-g" value="4" /></label>
+      <label>h <input id="zk-h" value="3" /></label>
+      <label>p <input id="zk-p" value="223" /></label>
+    </div>
+    <button id="run-zk" type="button" class="zk-btn">Full ZK check (WASM)</button>
   </section>
 
   <section class="card">
@@ -40,6 +51,18 @@ const base = import.meta.env.BASE_URL;
     <div id="verdict" class="verdict">—</div>
   </section>
 
+  <section class="card zk-card" id="zk-section" hidden>
+    <h2>Full ZK pipeline (browser)</h2>
+    <div class="result-row"><span class="label">all_ok</span><code id="zk-all">—</code></div>
+    <div class="result-row"><span class="label">homomorphic_ok</span><code id="zk-hom">—</code></div>
+    <div class="result-row"><span class="label">all_bit_or_ok</span><code id="zk-or">—</code></div>
+    <div class="result-row"><span class="label">bits_reconstruct_ok</span><code id="zk-bits">—</code></div>
+    <details class="zk-details">
+      <summary>Per-bit rows (commitment + OR valid)</summary>
+      <pre id="zk-rows" class="json">—</pre>
+    </details>
+  </section>
+
   <section class="card hint">
     <h3>Why this proves v ≥ T</h3>
     <p>
@@ -55,6 +78,36 @@ const base = import.meta.env.BASE_URL;
     await m.default(`${wasmBase}/pkg/zkp_bg.wasm`);
 
     const $ = id => document.getElementById(id);
+
+    function runZk() {
+      const v = $('v').value;
+      const t = $('t').value;
+      const numBits = parseInt($('num-bits').value);
+      const g = $('zk-g').value;
+      const h = $('zk-h').value;
+      const p = $('zk-p').value;
+      const raw = m.range_zk_verify(v, t, numBits, g, h, p);
+      const data = JSON.parse(raw);
+      const sec = $('zk-section');
+      sec.hidden = false;
+      if (data.error) {
+        $('zk-all').innerText = data.error;
+        $('zk-all').className = 'err';
+        $('zk-hom').innerText = '—';
+        $('zk-or').innerText = '—';
+        $('zk-bits').innerText = '—';
+        $('zk-rows').innerText = raw;
+        return;
+      }
+      $('zk-all').innerText = String(data.all_ok);
+      $('zk-all').className = data.all_ok ? 'ok' : 'err';
+      $('zk-hom').innerText = String(data.homomorphic_ok);
+      $('zk-or').innerText = String(data.all_bit_or_ok);
+      $('zk-bits').innerText = String(data.bits_reconstruct_ok);
+      $('zk-rows').innerText = JSON.stringify(data.bit_rows, null, 2);
+    }
+
+    $('run-zk').addEventListener('click', runZk);
 
     $('run').addEventListener('click', () => {
       const v = $('v').value;
@@ -142,6 +195,14 @@ const base = import.meta.env.BASE_URL;
       margin-top: 12px;
     }
     button:hover { opacity: 0.9; }
+    button.zk-btn { background: #1a5a8a; }
+    .zk-hint { font-size: 0.85rem; color: var(--fg-muted); margin: 12px 0 8px; }
+    .zk-grid label input { width: 88px; }
+    .zk-card { background: #f8fbff; }
+    .zk-details { margin-top: 12px; }
+    pre.json { font-size: 0.75rem; max-height: 280px; overflow: auto; background: var(--code-bg); padding: 10px; border-radius: 6px; }
+    code.ok { color: #2a7a2a; font-weight: 600; }
+    code.err { color: #c33; font-weight: 600; }
     .result-row {
       display: flex;
       align-items: center;
