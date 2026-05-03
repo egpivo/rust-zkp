@@ -6,7 +6,7 @@ A minimal ZK-Rollup, hand-built in Rust. ZKP primitives composed from scratch, w
 
 ## What's in it
 
-- **ZKP primitives**: Pedersen commitment · Sigma + Fiat-Shamir · Merkle membership · range proof via bit decomposition
+- **ZKP primitives**: Pedersen commitment · Sigma + Fiat-Shamir · bit-OR (binary Pedersen) · range via bit decomposition · Merkle membership
 - **Mini rollup**: signed transactions, atomic batch processing, Merkle state root, sled persistence
 - **Production-style backend**: axum, MPSC mempool with background batch builder, structured logging (`tracing`), CORS, custom error responses, full CI/CD
 - **WASM playground**: same Rust crypto in the browser; signs and submits to the deployed API

@@ -7,8 +7,8 @@ const base = import.meta.env.BASE_URL;
   <a href={`${base}/demos/`} class="back">← Playground</a>
   <h1>Merkle Membership</h1>
   <p class="subtitle">
-    Prove an element is in a set of leaves, given only the Merkle root.
-    The proof has size <code>O(log n)</code>: for 1000 leaves, just 10 sibling hashes.
+    Ex4-style membership: prove an element is in a set of leaves given only the Merkle root — the same shape as a rollup state tree, after the Pedersen / range demos.
+    Proof size is <code>O(log n)</code> (e.g. 1000 leaves → about 10 sibling hashes).
   </p>
 
   <section class="card">

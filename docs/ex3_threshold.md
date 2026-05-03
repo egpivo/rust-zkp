@@ -56,13 +56,9 @@ If the equation holds, `delta` really is the bit combination, and `v = T + delta
 - Hiding property of Pedersen: `C_i` reveals nothing about `b_i`
 - Verifier only learns: "delta is representable as 8 bits" → i.e., `0 <= delta < 2^8` → hence `v >= T`
 
-## What's NOT Complete
+## Proving each `b_i ∈ {0, 1}`
 
-Our simplified version is missing one crucial piece: **proof that each `b_i ∈ {0, 1}`**.
-
-Without this, a cheating prover could commit arbitrary values like `b_0 = 100`, and the algebra would still work out. A full range proof (e.g., Bulletproofs) proves each bit is binary via an additional Sigma protocol on `b_i * (1 - b_i) == 0`.
-
-For our learning purposes, we accept this gap.
+Homomorphic recombination alone does not rule out non-binary committed digits. The crate adds a **Schnorr disjunction (OR) + Fiat–Shamir** proof per bit commitment (`src/bits.rs`). Try it in the playground: [**Bit-OR**](https://egpivo.github.io/rust-zkp/demos/bit-or/) · [**Range** (full pipeline)](https://egpivo.github.io/rust-zkp/demos/range/).
 
 ## Rust Lessons
 
@@ -142,4 +138,4 @@ let r_delta: BigUint = (0..8).map(|i| &r_bits[i] * BigUint::from(1u32 << i)).sum
 |---|---|---|---|
 | Ex1 | Know preimage | Sigma + Fiat-Shamir | Interactive/non-interactive ZKP |
 | Ex2 | Sum is correct | Homomorphic addition | Commitments can be combined |
-| Ex3 | Value ≥ threshold | Bit decomposition + homomorphic | Range proof basics |
+| Ex3 | Value ≥ threshold | Bit decomposition + homomorphic + OR per bit | Range proof basics |
