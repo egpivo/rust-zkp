@@ -1,62 +1,68 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" width="900" height="400" role="img" aria-labelledby="t2 d2">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 360" width="920" height="360" role="img" aria-labelledby="t2 d2">
   <title id="t2">Claims to modules to rollup</title>
   <desc id="d2">Maps proof goals to Rust modules and the mini rollup.</desc>
+
+  <!-- Solid background (avoids "empty" look on dark / transparent hosts) -->
+  <rect x="0" y="0" width="920" height="360" fill="#fafafa"/>
+
   <defs>
     <marker id="mk" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
       <path d="M0,0 L10,4 L0,8 Z" fill="#0066cc"/>
     </marker>
     <style type="text/css"><![CDATA[
-      .cl { fill: #fff; stroke: #c8c8c8; stroke-width: 1.5; rx: 6; }
-      .cd { fill: #e8f2fc; stroke: #0066cc; stroke-width: 1.5; rx: 6; }
-      .rp { fill: #1a3a52; stroke: #0d2840; stroke-width: 2; rx: 10; }
-      .c1 { font: 13px ui-sans-serif, system-ui, sans-serif; fill: #1a1a1a; }
-      .c2 { font: 12px ui-monospace, Menlo, monospace; fill: #444; }
-      .w1 { font: 600 14px ui-sans-serif, system-ui, sans-serif; fill: #fff; }
-      .w2 { font: 12px ui-sans-serif, system-ui, sans-serif; fill: #cde4ff; }
+      .c1 { font-family: sans-serif; font-size: 13px; font-weight: normal; fill: #1a1a1a; }
+      .c2 { font-family: monospace; font-size: 12px; fill: #333; }
+      .w1 { font-family: sans-serif; font-size: 15px; font-weight: 600; fill: #ffffff; }
+      .w2 { font-family: sans-serif; font-size: 12px; fill: #cde4ff; }
+      .hd { font-family: sans-serif; font-size: 11px; font-weight: 700; fill: #666666; letter-spacing: 0.06em; }
       .ln { stroke: #0066cc; stroke-width: 2; fill: none; marker-end: url(#mk); }
-      .hd { font: 700 11px ui-sans-serif, system-ui, sans-serif; fill: #666; letter-spacing: 0.06em; }
     ]]></style>
   </defs>
 
-  <text x="36" y="30" class="hd">CLAIM</text>
-  <text x="360" y="30" class="hd">MODULE</text>
-  <text x="648" y="30" class="hd">ROLLUP</text>
+  <text x="36" y="28" class="hd">CLAIM</text>
+  <text x="360" y="28" class="hd">MODULE</text>
+  <text x="668" y="28" class="hd">ROLLUP</text>
 
-  <rect class="cl" x="20" y="48" width="300" height="48"/>
-  <text x="170" y="78" text-anchor="middle" class="c1">Know discrete log of pubkey</text>
-  <path class="ln" d="M 322 72 L 346 72"/>
-  <rect class="cd" x="348" y="48" width="260" height="48"/>
-  <text x="478" y="78" text-anchor="middle" class="c2">sigma.rs + Fiat–Shamir</text>
+  <!-- Row 1 -->
+  <rect x="20" y="44" width="300" height="48" rx="6" fill="#ffffff" stroke="#c8c8c8" stroke-width="1.5"/>
+  <text x="170" y="74" text-anchor="middle" class="c1">Know discrete log of pubkey</text>
+  <path class="ln" d="M 322 68 L 346 68"/>
+  <rect x="348" y="44" width="260" height="48" rx="6" fill="#e8f2fc" stroke="#0066cc" stroke-width="1.5"/>
+  <text x="478" y="74" text-anchor="middle" class="c2">sigma.rs + Fiat-Shamir</text>
 
-  <rect class="cl" x="20" y="112" width="300" height="48"/>
-  <text x="170" y="142" text-anchor="middle" class="c1">Sum matches under Pedersen</text>
-  <path class="ln" d="M 322 136 L 346 136"/>
-  <rect class="cd" x="348" y="112" width="260" height="48"/>
-  <text x="478" y="142" text-anchor="middle" class="c2">commitment.rs</text>
+  <!-- Row 2 -->
+  <rect x="20" y="108" width="300" height="48" rx="6" fill="#ffffff" stroke="#c8c8c8" stroke-width="1.5"/>
+  <text x="170" y="138" text-anchor="middle" class="c1">Sum matches under Pedersen</text>
+  <path class="ln" d="M 322 132 L 346 132"/>
+  <rect x="348" y="108" width="260" height="48" rx="6" fill="#e8f2fc" stroke="#0066cc" stroke-width="1.5"/>
+  <text x="478" y="138" text-anchor="middle" class="c2">commitment.rs</text>
 
-  <rect class="cl" x="20" y="176" width="300" height="56"/>
-  <text x="170" y="202" text-anchor="middle" class="c1">Range / threshold + binary bits</text>
-  <text x="170" y="220" text-anchor="middle" class="c2">Ex3</text>
-  <path class="ln" d="M 322 204 L 346 204"/>
-  <rect class="cd" x="348" y="176" width="260" height="56"/>
-  <text x="478" y="200" text-anchor="middle" class="c2">commitment.rs + bits.rs</text>
-  <text x="478" y="220" text-anchor="middle" class="c2">(OR proof + transcript)</text>
+  <!-- Row 3 (taller) -->
+  <rect x="20" y="172" width="300" height="56" rx="6" fill="#ffffff" stroke="#c8c8c8" stroke-width="1.5"/>
+  <text x="170" y="198" text-anchor="middle" class="c1">Range / threshold + binary bits</text>
+  <text x="170" y="216" text-anchor="middle" class="c2">Ex3</text>
+  <path class="ln" d="M 322 200 L 346 200"/>
+  <rect x="348" y="172" width="260" height="56" rx="6" fill="#e8f2fc" stroke="#0066cc" stroke-width="1.5"/>
+  <text x="478" y="196" text-anchor="middle" class="c2">commitment.rs + bits.rs</text>
+  <text x="478" y="216" text-anchor="middle" class="c2">(OR proof + transcript)</text>
 
-  <rect class="cl" x="20" y="248" width="300" height="48"/>
-  <text x="170" y="278" text-anchor="middle" class="c1">Merkle membership</text>
-  <path class="ln" d="M 322 272 L 346 272"/>
-  <rect class="cd" x="348" y="248" width="260" height="48"/>
-  <text x="478" y="278" text-anchor="middle" class="c2">merkle.rs</text>
+  <!-- Row 4 -->
+  <rect x="20" y="244" width="300" height="48" rx="6" fill="#ffffff" stroke="#c8c8c8" stroke-width="1.5"/>
+  <text x="170" y="274" text-anchor="middle" class="c1">Merkle membership</text>
+  <path class="ln" d="M 322 268 L 346 268"/>
+  <rect x="348" y="244" width="260" height="48" rx="6" fill="#e8f2fc" stroke="#0066cc" stroke-width="1.5"/>
+  <text x="478" y="274" text-anchor="middle" class="c2">merkle.rs</text>
 
-  <path class="ln" d="M 610 72 L 628 72"/>
-  <path class="ln" d="M 610 136 L 628 136"/>
-  <path class="ln" d="M 610 204 L 628 204"/>
-  <path class="ln" d="M 610 272 L 628 272"/>
+  <!-- Arrows into rollup (end near left edge of rollup box) -->
+  <path class="ln" d="M 610 68 L 636 68"/>
+  <path class="ln" d="M 610 132 L 636 132"/>
+  <path class="ln" d="M 610 200 L 636 200"/>
+  <path class="ln" d="M 610 268 L 636 268"/>
 
-  <rect class="rp" x="628" y="96" width="252" height="200"/>
-  <text x="754" y="150" text-anchor="middle" class="w1">Mini rollup</text>
-  <text x="754" y="182" text-anchor="middle" class="w2">signed tx · batches</text>
-  <text x="754" y="206" text-anchor="middle" class="w2">state root · persistence</text>
-  <text x="754" y="248" text-anchor="middle" class="w2">composition (not a SNARK)</text>
+  <rect x="636" y="88" width="264" height="200" rx="10" ry="10" fill="#1a3a52" stroke="#0d2840" stroke-width="2"/>
+  <text x="768" y="138" text-anchor="middle" class="w1">Mini rollup</text>
+  <text x="768" y="168" text-anchor="middle" class="w2">signed tx, batches</text>
+  <text x="768" y="192" text-anchor="middle" class="w2">state root, persistence</text>
+  <text x="768" y="232" text-anchor="middle" class="w2">composition (not a SNARK)</text>
 </svg>
