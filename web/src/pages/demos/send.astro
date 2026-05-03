@@ -7,8 +7,9 @@ const base = import.meta.env.BASE_URL;
   <a href={`${base}/demos/`} class="back">← Playground</a>
   <h1>Transaction Builder</h1>
   <p>
-    Sign a transaction in your browser using WebAssembly, then submit it to your
-    local rollup server. The secret never leaves your browser.
+    Sign a transaction in your browser using WebAssembly, then submit it to a rollup API
+    (defaults to the hosted server; use <code>http://localhost:3000</code> when running <code>cargo run --bin zkp</code> locally).
+    The signing secret never leaves your browser.
   </p>
 
   <div class="demo">
