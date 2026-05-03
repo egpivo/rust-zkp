@@ -35,6 +35,12 @@ const demos = [
     status: "live",
   },
   {
+    slug: "accounts",
+    title: "Account Explorer",
+    desc: "Fetch /accounts from the API and inspect balances and nonces.",
+    status: "live",
+  },
+  {
     slug: "mempool",
     title: "Mempool Stream",
     desc: "Live WebSocket feed: see batches drained in real time.",
@@ -47,7 +53,10 @@ const demos = [
   <h1>Playground</h1>
   <p class="subtitle">
     Interactive demos powered by the Rust ZKP library compiled to WebAssembly.
-    All computation runs in your browser — nothing is sent to a server.
+    Pedersen, Sigma, Merkle, and range demos run entirely in your browser.
+    <strong>Transaction Builder</strong>, <strong>Account Explorer</strong>, and <strong>Mempool Stream</strong>
+    call a rollup HTTP/WebSocket URL (defaults to the hosted demo API); point them at <code>http://localhost:3000</code> when you run <code>cargo run --bin zkp</code> locally.
+    If the hosted API is cold, the first request can take ~30–60s — retry once.
   </p>
 
   <div class="demo-grid">
